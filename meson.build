@@ -37,7 +37,7 @@ if get_option('tracker_core') == 'system'
 
   tracker_sparql_uninstalled_dir = tracker_sparql.get_pkgconfig_variable('libdir')
 else
-  tracker_subproject = subproject('tracker')
+  tracker_subproject = subproject('tracker', default_options: ['systemd_user_services=false'])
 
   tracker_sparql = tracker_subproject.get_variable('tracker_sparql_dep')
 
