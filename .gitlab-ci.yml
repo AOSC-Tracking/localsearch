@@ -25,7 +25,7 @@ stages:
     - su tracker -c '.gitlab-ci/checkout-tracker.sh'
     - echo "Building tracker.git commit $(git -C ./subprojects/tracker rev-parse HEAD)"
     - su tracker -c 'mkdir build'
-    - su tracker -c 'cd build; meson .. --prefix=/usr -Dtracker_core=subproject -Db_lto=true -Db_coverage=true'
+    - su tracker -c 'cd build; meson .. --prefix=/usr -Dtracker_core=subproject -Db_lto=true -Db_coverage=true -Dsystemd_user_services=false'
     - su tracker -c 'cd build; ninja'
     - |
       # Remove the many "CI_" variables from the environment. Meson dumps the
@@ -67,7 +67,6 @@ test-alpine-rolling:
   image: registry.gitlab.gnome.org/gnome/tracker-oci-images/amd64/alpine:edge
   before_script:
     - apk add libgrss-dev libseccomp-dev gstreamer-dev libcue-dev libgxps-dev libgsf-dev tiff-dev upower-dev libosinfo-dev totem-pl-parser-dev poppler-dev shared-mime-info gst-plugins-base gst-plugins-good gst-plugins-bad gst-plugins-ugly
-    - echo "Name:systemd\nVersion:246\nsystemduserunitdir=/tmp" > /usr/lib/pkgconfig/systemd.pc
   <<: *test
 
 coverage-analysis:
