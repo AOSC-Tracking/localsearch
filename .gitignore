@@ -15,3 +15,5 @@ tracker-*-client.h
 tracker-*-glue.h
 tracker-preferences.[ch]
 build/
+subprojects/tracker
+.vscode/settings.json

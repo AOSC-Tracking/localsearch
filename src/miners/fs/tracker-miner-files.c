@@ -61,7 +61,9 @@
 	G_FILE_ATTRIBUTE_STANDARD_DISPLAY_NAME "," \
 	G_FILE_ATTRIBUTE_STANDARD_SIZE "," \
 	G_FILE_ATTRIBUTE_TIME_MODIFIED "," \
-	G_FILE_ATTRIBUTE_TIME_ACCESS
+	G_FILE_ATTRIBUTE_TIME_ACCESS "," \
+	G_FILE_ATTRIBUTE_TIME_MODIFIED_USEC "," \
+	G_FILE_ATTRIBUTE_TIME_ACCESS_USEC
 
 #define TRACKER_MINER_FILES_GET_PRIVATE(o) (tracker_miner_files_get_instance_private (TRACKER_MINER_FILES (o)))
 
@@ -2198,7 +2200,9 @@ miner_files_process_file_attributes (TrackerMinerFS      *fs,
 	if (!info) {
 		info = g_file_query_info (file,
 		                          G_FILE_ATTRIBUTE_TIME_MODIFIED ","
-		                          G_FILE_ATTRIBUTE_TIME_ACCESS,
+								  G_FILE_ATTRIBUTE_TIME_MODIFIED_USEC ","
+								  G_FILE_ATTRIBUTE_TIME_ACCESS ","
+		                          G_FILE_ATTRIBUTE_TIME_ACCESS_USEC,
 		                          G_FILE_QUERY_INFO_NOFOLLOW_SYMLINKS,
 		                          NULL, NULL);
 	}
