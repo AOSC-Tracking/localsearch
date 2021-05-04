@@ -314,7 +314,8 @@ print_turtle (gchar               *urn,
 	while (tracker_sparql_cursor_next (cursor, NULL, NULL)) {
 		const gchar *key = tracker_sparql_cursor_get_string (cursor, 0, NULL);
 		const gchar *value = tracker_sparql_cursor_get_string (cursor, 1, NULL);
-		const gchar *is_resource = tracker_sparql_cursor_get_string (cursor, 2, NULL);
+		const gchar *subject_value = tracker_sparql_cursor_get_string (cursor, 2, NULL);
+		const gchar *is_resource = tracker_sparql_cursor_get_string (cursor, 3, NULL);
 
 		if (!key || !value || !is_resource) {
 			continue;
@@ -339,6 +340,9 @@ print_turtle (gchar               *urn,
 			object = g_strdup_printf ("\"%s\"", escaped_value);
 			g_free (escaped_value);
 		}
+
+		if  (subject_value)
+			subject = g_strdup (subject_value);
 
 		/* Print final statement */
 		g_print ("<%s> %s %s .\n", subject, predicate, object);
@@ -465,12 +469,17 @@ info_run (void)
 			g_object_unref (cursor);
 		}
 
-		query = g_strdup_printf ("SELECT ?predicate ?object"
+		query = g_strdup_printf ("SELECT DISTINCT ?predicate ?object ?x"
 		                         "  ( EXISTS { ?predicate rdfs:range [ rdfs:subClassOf rdfs:Resource ] } )"
 		                         "WHERE {"
-		                         "  <%s> ?predicate ?object "
+		                         "  { <%s> ?predicate ?object . } "
+					 "  UNION "
+					 "  { <%s> nie:interpretedAs ?x . "
+					 "    ?x ?predicate ?object . "
+	                                 "  } "
 		                         "}",
-		                         urn);
+					 urn,
+					 urn);
 
 		cursor = tracker_sparql_connection_query (connection, query, NULL, &error);
 

@@ -18,7 +18,7 @@ testconf.set('TEST_GSETTINGS_SCHEMA_DIR', tracker_miners_uninstalled_gsettings_s
 testconf.set('TEST_LANGUAGE_STOP_WORDS_DIR', tracker_uninstalled_stop_words_dir)
 testconf.set('TEST_ONTOLOGIES_DIR', tracker_uninstalled_nepomuk_ontologies_dir)
 testconf.set('TEST_WRITEBACK_MODULES_DIR', tracker_uninstalled_writeback_modules_dir)
-testconf.set('TEST_TAP_ENABLED', get_option('tests_tap_protocol'))
+testconf.set('TEST_TAP_ENABLED', get_option('tests_tap_protocol').to_string())
 testconf.set('TRACKER_EXTRACT_PATH', uninstalled_tracker_extract_path)
 
 test_domain_rule = configure_file(

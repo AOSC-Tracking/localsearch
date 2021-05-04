@@ -30,7 +30,7 @@ foreach base_name: libtracker_extract_tests
       c_args: test_c_args)
 
     test(base_name, binary,
-      environtment: extract_test_environment,
+      env: extract_test_environment,
       protocol: test_protocol,
       suite: 'extract')
 endforeach
@@ -42,7 +42,7 @@ if libiptcdata.found() and libjpeg.found()
     c_args: test_c_args,
   )
   test('extract-iptc', iptc_test,
-    environtment: extract_test_environment,
+    env: extract_test_environment,
     protocol: test_protocol,
     suite: 'extract')
 endif

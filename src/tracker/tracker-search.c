@@ -117,7 +117,7 @@ static GOptionEntry entries[] = {
 	/* Semantic options */
 	{ "limit", 'l', 0, G_OPTION_ARG_INT, &limit,
 	  N_("Limit the number of results shown"),
-	  "512"
+	  NULL
 	},
 	{ "offset", 'o', 0, G_OPTION_ARG_INT, &offset,
 	  N_("Offset the results"),
@@ -156,23 +156,6 @@ static GOptionEntry entries[] = {
 	},
 	{ NULL }
 };
-
-static void
-show_limit_warning (void)
-{
-	/* Display '...' so the user thinks there is
-	 * more items.
-	 */
-	g_print ("  ...\n");
-
-	/* Display warning so the user knows this is
-	 * not the WHOLE data set.
-	 */
-	g_printerr ("\n%s%s%s\n",
-	            disable_color ? "" : WARN_BEGIN,
-	            _("NOTE: Limit was reached, there are more items in the database not listed here"),
-	            disable_color ? "" : WARN_END);
-}
 
 static gchar *
 get_fts_string (GStrv    search_words,
@@ -299,9 +282,6 @@ get_files_results (TrackerSparqlConnection *connection,
 
 		g_print ("\n");
 
-		if (count >= search_limit) {
-			show_limit_warning ();
-		}
 
 		g_object_unref (cursor);
 	}
@@ -322,6 +302,12 @@ get_document_files (TrackerSparqlConnection *connection,
 	gchar *query;
 	const gchar *show_all_str;
 	gboolean success;
+	gchar *limit_str;
+
+	if (search_limit != -1)
+		limit_str = g_strdup_printf ("LIMIT %d", search_limit);
+	else
+		limit_str = g_strdup_printf (" ");
 
 	show_all_str = show_all ? "" : "?document nie:isStoredAs/nie:dataSource/tracker:available true .";
 	fts = get_fts_string (search_terms, use_or_operator);
@@ -335,13 +321,13 @@ get_document_files (TrackerSparqlConnection *connection,
 		                         "} "
 		                         "ORDER BY ASC(nie:isStoredAs(?document)) "
 		                         "OFFSET %d "
-		                         "LIMIT %d",
+		                         "%s",
 		                         disable_color ? "" : SNIPPET_BEGIN,
 		                         disable_color ? "" : SNIPPET_END,
 		                         fts,
 		                         show_all_str,
 		                         search_offset,
-		                         search_limit);
+		                         limit_str);
 	} else {
 		query = g_strdup_printf ("SELECT ?document nie:isStoredAs(?document) "
 		                         "WHERE { "
@@ -350,15 +336,16 @@ get_document_files (TrackerSparqlConnection *connection,
 		                         "} "
 		                         "ORDER BY ASC(nie:isStoredAs(?document)) "
 		                         "OFFSET %d "
-		                         "LIMIT %d",
+		                         "%s",
 		                         show_all_str,
 		                         search_offset,
-		                         search_limit);
+		                         limit_str);
 	}
 
 	success = get_files_results (connection, query, search_limit, details);
 	g_free (query);
 	g_free (fts);
+	g_free (limit_str);
 
 	return success;
 }
@@ -376,6 +363,12 @@ get_video_files (TrackerSparqlConnection *connection,
 	gchar *query;
 	const gchar *show_all_str;
 	gboolean success;
+	gchar *limit_str;
+
+	if (search_limit != -1)
+		limit_str = g_strdup_printf ("LIMIT %d", search_limit);
+	else
+		limit_str = g_strdup_printf (" ");
 
 	show_all_str = show_all ? "" : "?video nie:isStoredAs/nie:dataSource/tracker:available true . ";
 	fts = get_fts_string (search_terms, use_or_operator);
@@ -389,13 +382,13 @@ get_video_files (TrackerSparqlConnection *connection,
 		                         "} "
 		                         "ORDER BY ASC(nie:isStoredAs(?video)) "
 		                         "OFFSET %d "
-		                         "LIMIT %d",
+		                         "%s",
 		                         disable_color ? "" : SNIPPET_BEGIN,
 		                         disable_color ? "" : SNIPPET_END,
 		                         fts,
 		                         show_all_str,
 		                         search_offset,
-		                         search_limit);
+		                         limit_str);
 	} else {
 		query = g_strdup_printf ("SELECT ?video nie:isStoredAs(?video) "
 		                         "WHERE { "
@@ -404,15 +397,16 @@ get_video_files (TrackerSparqlConnection *connection,
 		                         "} "
 		                         "ORDER BY ASC(nie:isStoredAs(?video)) "
 		                         "OFFSET %d "
-		                         "LIMIT %d",
+		                         "%s",
 		                         show_all_str,
 		                         search_offset,
-		                         search_limit);
+		                         limit_str);
 	}
 
 	success = get_files_results (connection, query, search_limit, details);
 	g_free (query);
 	g_free (fts);
+	g_free (limit_str);
 
 	return success;
 }
@@ -430,6 +424,12 @@ get_image_files (TrackerSparqlConnection *connection,
 	gchar *query;
 	const gchar *show_all_str;
 	gboolean success;
+	gchar *limit_str;
+
+	if (search_limit != -1)
+		limit_str = g_strdup_printf ("LIMIT %d", search_limit);
+	else
+		limit_str = g_strdup_printf (" ");
 
 	show_all_str = show_all ? "" : "?image nie:isStoredAs/nie:dataSource/tracker:available true . ";
 	fts = get_fts_string (search_terms, use_or_operator);
@@ -443,13 +443,13 @@ get_image_files (TrackerSparqlConnection *connection,
 		                         "} "
 		                         "ORDER BY ASC(nie:isStoredAs(?image)) "
 		                         "OFFSET %d "
-		                         "LIMIT %d",
+		                         "%s",
 		                         disable_color ? "" : SNIPPET_BEGIN,
 		                         disable_color ? "" : SNIPPET_END,
 		                         fts,
 		                         show_all_str,
 		                         search_offset,
-		                         search_limit);
+		                         limit_str);
 	} else {
 		query = g_strdup_printf ("SELECT ?image nie:isStoredAs(?image) "
 		                         "WHERE { "
@@ -458,15 +458,16 @@ get_image_files (TrackerSparqlConnection *connection,
 		                         "} "
 		                         "ORDER BY ASC(nie:isStoredAs(?image)) "
 		                         "OFFSET %d "
-		                         "LIMIT %d",
+		                         "%s",
 		                         show_all_str,
 		                         search_offset,
-		                         search_limit);
+		                         limit_str);
 	}
 
 	success = get_files_results (connection, query, search_limit, details);
 	g_free (query);
 	g_free (fts);
+	g_free (limit_str);
 
 	return success;
 }
@@ -484,6 +485,12 @@ get_music_files (TrackerSparqlConnection *connection,
 	gchar *query;
 	const gchar *show_all_str;
 	gboolean success;
+	gchar *limit_str;
+
+	if (search_limit != -1)
+		limit_str = g_strdup_printf ("LIMIT %d", search_limit);
+	else
+		limit_str = g_strdup_printf (" ");
 
 	show_all_str = show_all ? "" : "?song nie:isStoredAs/nie:dataSource/tracker:available true . ";
 	fts = get_fts_string (search_terms, use_or_operator);
@@ -497,13 +504,13 @@ get_music_files (TrackerSparqlConnection *connection,
 		                         "} "
 		                         "ORDER BY ASC(nie:isStoredAs(?song)) "
 		                         "OFFSET %d "
-		                         "LIMIT %d",
+		                         "%s",
 		                         disable_color ? "" : SNIPPET_BEGIN,
 		                         disable_color ? "" : SNIPPET_END,
 		                         fts,
 		                         show_all_str,
 		                         search_offset,
-		                         search_limit);
+		                         limit_str);
 	} else {
 		query = g_strdup_printf ("SELECT ?song nie:isStoredAs(?song) "
 		                         "WHERE { "
@@ -512,15 +519,16 @@ get_music_files (TrackerSparqlConnection *connection,
 		                         "} "
 		                         "ORDER BY ASC(nie:isStoredAs(?song)) "
 		                         "OFFSET %d "
-		                         "LIMIT %d",
+		                         "%s",
 		                         show_all_str,
 		                         search_offset,
-		                         search_limit);
+		                         limit_str);
 	}
 
 	success = get_files_results (connection, query, search_limit, details);
 	g_free (query);
 	g_free (fts);
+	g_free (limit_str);
 
 	return success;
 }
@@ -537,6 +545,12 @@ get_music_artists (TrackerSparqlConnection *connection,
 	TrackerSparqlCursor *cursor;
 	gchar *fts;
 	gchar *query;
+	gchar *limit_str;
+
+	if (search_limit != -1)
+		limit_str = g_strdup_printf ("LIMIT %d", search_limit);
+	else
+		limit_str = g_strdup_printf (" ");
 
 	fts = get_fts_string (search_terms, use_or_operator);
 
@@ -549,10 +563,10 @@ get_music_artists (TrackerSparqlConnection *connection,
 		                         "} "
 		                         "ORDER BY ASC(?title) "
 		                         "OFFSET %d "
-		                         "LIMIT %d",
+		                         "%s",
 		                         fts,
 		                         search_offset,
-		                         search_limit);
+		                         limit_str);
 	} else {
 		query = g_strdup_printf ("SELECT ?artist ?title "
 		                         "WHERE {"
@@ -561,12 +575,13 @@ get_music_artists (TrackerSparqlConnection *connection,
 		                         "} "
 		                         "ORDER BY ASC(?title) "
 		                         "OFFSET %d "
-		                         "LIMIT %d",
+		                         "%s",
 		                         search_offset,
-		                         search_limit);
+		                         limit_str);
 	}
 
 	g_free (fts);
+	g_free (limit_str);
 
 	cursor = tracker_sparql_connection_query (connection, query, NULL, &error);
 	g_free (query);
@@ -606,10 +621,6 @@ get_music_artists (TrackerSparqlConnection *connection,
 
 		g_print ("\n");
 
-		if (count >= search_limit) {
-			show_limit_warning ();
-		}
-
 		g_object_unref (cursor);
 	}
 
@@ -628,6 +639,12 @@ get_music_albums (TrackerSparqlConnection *connection,
 	TrackerSparqlCursor *cursor;
 	gchar *fts;
 	gchar *query;
+	gchar *limit_str;
+
+	if (search_limit != -1)
+		limit_str = g_strdup_printf ("LIMIT %d", search_limit);
+	else
+		limit_str = g_strdup_printf (" ");
 
 	fts = get_fts_string (search_words, use_or_operator);
 
@@ -639,10 +656,10 @@ get_music_albums (TrackerSparqlConnection *connection,
 		                         "} "
 		                         "ORDER BY ASC(nie:title(?album)) "
 		                         "OFFSET %d "
-		                         "LIMIT %d",
+		                         "%s",
 		                         fts,
 		                         search_offset,
-		                         search_limit);
+		                         limit_str);
 	} else {
 		query = g_strdup_printf ("SELECT ?album nie:title(?album) "
 		                         "WHERE {"
@@ -650,12 +667,13 @@ get_music_albums (TrackerSparqlConnection *connection,
 		                         "} "
 		                         "ORDER BY ASC(nie:title(?album)) "
 		                         "OFFSET %d "
-		                         "LIMIT %d",
+		                         "%s",
 		                         search_offset,
-		                         search_limit);
+		                         limit_str);
 	}
 
 	g_free (fts);
+	g_free (limit_str);
 
 	cursor = tracker_sparql_connection_query (connection, query, NULL, &error);
 	g_free (query);
@@ -695,9 +713,6 @@ get_music_albums (TrackerSparqlConnection *connection,
 
 		g_print ("\n");
 
-		if (count >= search_limit) {
-			show_limit_warning ();
-		}
 
 		g_object_unref (cursor);
 	}
@@ -716,6 +731,12 @@ get_feeds (TrackerSparqlConnection *connection,
 	TrackerSparqlCursor *cursor;
 	gchar *fts;
 	gchar *query;
+	gchar *limit_str;
+
+	if (search_limit != -1)
+		limit_str = g_strdup_printf ("LIMIT %d", search_limit);
+	else
+		limit_str = g_strdup_printf (" ");
 
 	fts = get_fts_string (search_terms, use_or_operator);
 
@@ -727,10 +748,10 @@ get_feeds (TrackerSparqlConnection *connection,
 		                         "} "
 		                         "ORDER BY ASC(nie:title(?feed)) "
 		                         "OFFSET %d "
-		                         "LIMIT %d",
+		                         "%s",
 		                         fts,
 		                         search_offset,
-		                         search_limit);
+		                         limit_str);
 	} else {
 		query = g_strdup_printf ("SELECT ?feed nie:title(?feed) "
 		                         "WHERE {"
@@ -738,12 +759,13 @@ get_feeds (TrackerSparqlConnection *connection,
 		                         "} "
 		                         "ORDER BY ASC(nie:title(?feed)) "
 		                         "OFFSET %d "
-		                         "LIMIT %d",
+		                         "%s",
 		                         search_offset,
-		                         search_limit);
+		                         limit_str);
 	}
 
 	g_free (fts);
+	g_free (limit_str);
 
 	cursor = tracker_sparql_connection_query (connection, query, NULL, &error);
 	g_free (query);
@@ -777,10 +799,6 @@ get_feeds (TrackerSparqlConnection *connection,
 
 		g_print ("\n");
 
-		if (count >= search_limit) {
-			show_limit_warning ();
-		}
-
 		g_object_unref (cursor);
 	}
 
@@ -798,6 +816,12 @@ get_software (TrackerSparqlConnection *connection,
 	TrackerSparqlCursor *cursor;
 	gchar *fts;
 	gchar *query;
+	gchar *limit_str;
+
+	if (search_limit != -1)
+		limit_str = g_strdup_printf ("LIMIT %d", search_limit);
+	else
+		limit_str = g_strdup_printf (" ");
 
 	fts = get_fts_string (search_terms, use_or_operator);
 
@@ -809,12 +833,12 @@ get_software (TrackerSparqlConnection *connection,
 		                         "} "
 		                         "ORDER BY ASC(nie:title(?soft)) "
 		                         "OFFSET %d "
-		                         "LIMIT %d",
+		                         "%s",
 		                         disable_color ? "" : SNIPPET_BEGIN,
 		                         disable_color ? "" : SNIPPET_END,
 		                         fts,
 		                         search_offset,
-		                         search_limit);
+		                         limit_str);
 	} else {
 		query = g_strdup_printf ("SELECT ?soft nie:title(?soft) "
 		                         "WHERE {"
@@ -822,12 +846,13 @@ get_software (TrackerSparqlConnection *connection,
 		                         "} "
 		                         "ORDER BY ASC(nie:title(?soft)) "
 		                         "OFFSET %d "
-		                         "LIMIT %d",
+		                         "%s",
 		                         search_offset,
-		                         search_limit);
+		                         limit_str);
 	}
 
 	g_free (fts);
+	g_free (limit_str);
 
 	cursor = tracker_sparql_connection_query (connection, query, NULL, &error);
 	g_free (query);
@@ -861,10 +886,6 @@ get_software (TrackerSparqlConnection *connection,
 
 		g_print ("\n");
 
-		if (count >= search_limit) {
-			show_limit_warning ();
-		}
-
 		g_object_unref (cursor);
 	}
 
@@ -882,6 +903,12 @@ get_software_categories (TrackerSparqlConnection *connection,
 	TrackerSparqlCursor *cursor;
 	gchar *fts;
 	gchar *query;
+	gchar *limit_str;
+
+	if (search_limit != -1)
+		limit_str = g_strdup_printf ("LIMIT %d", search_limit);
+	else
+		limit_str = g_strdup_printf (" ");
 
 	fts = get_fts_string (search_terms, use_or_operator);
 
@@ -893,10 +920,10 @@ get_software_categories (TrackerSparqlConnection *connection,
 		                         "} "
 		                         "ORDER BY ASC(nie:title(?cat)) "
 		                         "OFFSET %d "
-		                         "LIMIT %d",
+		                         "%s",
 		                         fts,
 		                         search_offset,
-		                         search_limit);
+		                         limit_str);
 	} else {
 		query = g_strdup_printf ("SELECT ?cat nie:title(?cat) "
 		                         "WHERE {"
@@ -904,12 +931,13 @@ get_software_categories (TrackerSparqlConnection *connection,
 		                         "} "
 		                         "ORDER BY ASC(nie:title(?cat)) "
 		                         "OFFSET %d "
-		                         "LIMIT %d",
+		                         "%s",
 		                         search_offset,
-		                         search_limit);
+		                         limit_str);
 	}
 
 	g_free (fts);
+	g_free (limit_str);
 
 	cursor = tracker_sparql_connection_query (connection, query, NULL, &error);
 	g_free (query);
@@ -943,10 +971,6 @@ get_software_categories (TrackerSparqlConnection *connection,
 
 		g_print ("\n");
 
-		if (count >= search_limit) {
-			show_limit_warning ();
-		}
-
 		g_object_unref (cursor);
 	}
 
@@ -965,7 +989,13 @@ get_files (TrackerSparqlConnection *connection,
 	gchar *fts;
 	gchar *query;
 	const gchar *show_all_str;
+	gchar *limit_str;
 	gboolean success;
+
+	if (search_limit != -1)
+		limit_str = g_strdup_printf ("LIMIT %d", search_limit);
+	else
+		limit_str = g_strdup_printf (" ");
 
 	show_all_str = show_all ? "" : "?u nie:isStoredAs/nie:dataSource/tracker:available true . ";
 	fts = get_fts_string (search_terms, use_or_operator);
@@ -980,11 +1010,11 @@ get_files (TrackerSparqlConnection *connection,
 		                         "} "
 		                         "ORDER BY ASC(?urn) "
 		                         "OFFSET %d "
-		                         "LIMIT %d",
+		                         "%s",
 		                         fts,
 		                         show_all_str,
 		                         search_offset,
-		                         search_limit);
+		                         limit_str);
 	} else {
 		query = g_strdup_printf ("SELECT ?u ?url "
 		                         "WHERE { "
@@ -994,15 +1024,16 @@ get_files (TrackerSparqlConnection *connection,
 		                         "} "
 		                         "ORDER BY ASC(?urn) "
 		                         "OFFSET %d "
-		                         "LIMIT %d",
+		                         "%s",
 		                         show_all_str,
 		                         search_offset,
-		                         search_limit);
+		                         limit_str);
 	}
 
 	success = get_files_results (connection, query, search_limit, details);
 	g_free (query);
 	g_free (fts);
+	g_free (limit_str);
 
 	return success;
 }
@@ -1019,7 +1050,13 @@ get_folders (TrackerSparqlConnection *connection,
 	gchar *fts;
 	gchar *query;
 	const gchar *show_all_str;
+	gchar *limit_str;
 	gboolean success;
+
+	if (search_limit != -1)
+		limit_str = g_strdup_printf ("LIMIT %d", search_limit);
+	else
+		limit_str = g_strdup_printf (" ");
 
 	show_all_str = show_all ? "" : "?u nie:isStoredAs/nie:dataSource/tracker:available true . ";
 	fts = get_fts_string (search_terms, use_or_operator);
@@ -1034,11 +1071,11 @@ get_folders (TrackerSparqlConnection *connection,
 		                         "} "
 		                         "ORDER BY ASC(nie:isStoredAs(?u)) "
 		                         "OFFSET %d "
-		                         "LIMIT %d",
+		                         "%s",
 		                         fts,
 		                         show_all_str,
 		                         search_offset,
-		                         search_limit);
+		                         limit_str);
 	} else {
 		query = g_strdup_printf ("SELECT ?u nie:isStoredAs(?u) "
 		                         "WHERE { "
@@ -1047,15 +1084,16 @@ get_folders (TrackerSparqlConnection *connection,
 		                         "} "
 		                         "ORDER BY ASC(nie:isStoredAs(?u)) "
 		                         "OFFSET %d "
-		                         "LIMIT %d",
+		                         "%s",
 		                         show_all_str,
 		                         search_offset,
-		                         search_limit);
+		                         limit_str);
 	}
 
 	success = get_files_results (connection, query, search_limit, details);
 	g_free (query);
 	g_free (fts);
+	g_free (limit_str);
 
 	return success;
 }
@@ -1074,11 +1112,17 @@ get_all_by_search (TrackerSparqlConnection *connection,
 	gchar *fts;
 	gchar *query;
 	const gchar *show_all_str;
+	gchar *limit_str;
 
 	fts = get_fts_string (search_words, use_or_operator);
 	if (!fts) {
 		return FALSE;
 	}
+
+	if (search_limit != -1)
+		limit_str = g_strdup_printf ("LIMIT %d", search_limit);
+	else
+		limit_str = g_strdup_printf (" ");
 
 	show_all_str = show_all ? "" : "?s nie:isStoredAs/nie:dataSource/tracker:available | nie:dataSource/tracker:available true . ";
 
@@ -1091,13 +1135,14 @@ get_all_by_search (TrackerSparqlConnection *connection,
 		                         "} "
 		                         "GROUP BY nie:isStoredAs(?s) "
 		                         "ORDER BY nie:isStoredAs(?s) "
-		                         "OFFSET %d LIMIT %d",
+		                         "OFFSET %d"
+					 "%s",
 		                         disable_color ? "" : SNIPPET_BEGIN,
 		                         disable_color ? "" : SNIPPET_END,
 		                         fts,
 		                         show_all_str,
 		                         search_offset,
-		                         search_limit);
+		                         limit_str);
 	} else {
 		query = g_strdup_printf ("SELECT tracker:coalesce (nie:isStoredAs (?s), ?s) fts:snippet(?s, \"%s\", \"%s\") "
 		                         "WHERE {"
@@ -1105,16 +1150,18 @@ get_all_by_search (TrackerSparqlConnection *connection,
 		                         "  %s"
 		                         "} "
 		                         "ORDER BY nie:isStoredAs(?s) "
-		                         "OFFSET %d LIMIT %d",
+		                         "OFFSET %d "
+					 "%s",
 		                         disable_color ? "" : SNIPPET_BEGIN,
 		                         disable_color ? "" : SNIPPET_END,
 		                         fts,
 		                         show_all_str,
 		                         search_offset,
-		                         search_limit);
+		                         limit_str);
 	}
 
 	g_free (fts);
+	g_free (limit_str);
 
 	cursor = tracker_sparql_connection_query (connection, query, NULL, &error);
 	g_free (query);
@@ -1183,10 +1230,6 @@ get_all_by_search (TrackerSparqlConnection *connection,
 
 		g_print ("\n");
 
-		if (count >= search_limit) {
-			show_limit_warning ();
-		}
-
 		g_object_unref (cursor);
 	}
 
@@ -1215,20 +1258,6 @@ search_run (void)
 	}
 
 	tracker_term_pipe_to_pager ();
-
-	if (limit <= 0) {
-		/* Default to 10 for snippets because more is not
-		 * useful on the screen. The categories are those not
-		 * using snippets yet.
-		 */
-		if (disable_snippets || !terms ||
-		    (files || folders ||
-		     music_albums || music_artists || feeds)) {
-			limit = 512;
-		} else {
-			limit = 10;
-		}
-	}
 
 	if (files) {
 		gboolean success;
