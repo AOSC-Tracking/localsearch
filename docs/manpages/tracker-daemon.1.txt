@@ -3,14 +3,13 @@ tracker3-daemon(1)
 
 == NAME
 
-tracker3-daemon - Start, stop, restart and list daemons responsible for
+tracker3-daemon - Restart and list daemons responsible for
 indexing content
 
 == SYNOPSIS
 
 ....
 tracker3 daemon [options...]
-tracker3 daemon -s | -t [daemons] | -k [daemons] | -l
 tracker3 daemon -f | -w [ontology]
 tracker3 daemon --miner <miner> --pause[-for-process] <reason>
 tracker3 daemon --miner <miner> --resume <cookie>
@@ -20,8 +19,6 @@ tracker3 daemon --miner <miner> --resume <cookie>
 
 Tracker indexes content with daemon processes that run in the background.
 The *tracker3 daemon* command allows for control of these components.
-This ranges from starting, stopping and killing processes to pausing and
-resuming them.
 
 In addition to all this, there are ways to follow or watch what is
 happening in real time from a top level and right down where the SPARQL
@@ -37,16 +34,6 @@ also list miners running and available.
 
 *-p, --list-processes*::
   This lists all Tracker processes in the system.
-*-k, --kill::
-  This uses SIGKILL to stop all Tracker processes found matching the
-  parameter, if no extra parameter is passed, "all" will be assumed.
-  This is not advised unless you are having problems stopping Tracker in
-  the first place. This *GUARANTEES* death.
-*-t, --terminate=::
-  This uses SIGTERM to stop all Tracker processes.  This is recommended over
-  --kill because it gives the processes time to shutdown cleanly.
-*-s, --start*::
-  Starts all miners.
 *-f, --follow*::
   Follow status changes to daemons as they happen. This is a top level
   view of what is happening. You will see the name for each daemon and a
