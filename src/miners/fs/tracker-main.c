@@ -1033,6 +1033,8 @@ main (gint argc, gchar *argv[])
 
 	main_loop = g_main_loop_new (NULL, FALSE);
 
+	initialize_signal_handler ();
+
 	if (no_daemon) {
 		g_debug ("tracker-miner-fs-3 running in --no-daemon mode.");
 	} else if (domain_ontology_name) {
@@ -1175,8 +1177,6 @@ main (gint argc, gchar *argv[])
 
 	if (do_crawling)
 		miner_start (miner_files, config, do_mtime_checking);
-
-	initialize_signal_handler ();
 
 	/* Go, go, go! */
 	g_main_loop_run (main_loop);
