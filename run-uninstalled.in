@@ -30,7 +30,7 @@ tracker_sparql_dir = "@tracker_sparql_uninstalled_dir@"
 testutils_dir = "@tracker_uninstalled_testutils_dir@"
 
 build_directory = pathlib.Path(__file__).parent
-dbus_config = build_directory.joinpath('tests/test-bus.conf')
+dbus_config = build_directory.joinpath('tests/test-session-bus.conf')
 
 env = os.environ
 

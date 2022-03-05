@@ -108,7 +108,7 @@ class TrackerMinerTest(ut.TestCase):
         extra_env['LANG'] = 'en_GB.utf8'
 
         self.sandbox = trackertestutils.helpers.TrackerDBusSandbox(
-            session_bus_config_file=cfg.TEST_DBUS_DAEMON_CONFIG_FILE, extra_env=extra_env)
+            session_bus_config_file=cfg.TEST_SESSION_BUS_CONFIG_FILE, extra_env=extra_env)
 
         self.sandbox.start()
 
@@ -123,7 +123,6 @@ class TrackerMinerTest(ut.TestCase):
 
             self.miner_fs = MinerFsHelper(self.sandbox.get_session_bus_connection())
             self.miner_fs.start()
-            self.miner_fs.start_watching_progress()
 
             self.tracker = trackertestutils.helpers.StoreHelper(
                 self.miner_fs.get_sparql_connection())

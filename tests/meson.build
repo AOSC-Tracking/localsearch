@@ -1,3 +1,5 @@
+skip_test = find_program('common/skip-test.sh')
+
 subdir('common')
 
 subdir('libtracker-miners-common')
@@ -10,8 +12,8 @@ endif
 subdir('services')
 
 test_bus_conf_file = configure_file(
-  input: 'test-bus.conf.in',
-  output: 'test-bus.conf',
+  input: 'test-session-bus.conf.in',
+  output: 'test-session-bus.conf',
   configuration: conf)
 
 if get_option('functional_tests')
