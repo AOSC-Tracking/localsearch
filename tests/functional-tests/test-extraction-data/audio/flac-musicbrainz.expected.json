@@ -12,7 +12,7 @@
         "nfo:genre": "Rock",
         "nfo:sampleRate": "44100",
         "nie:comment": "no comment",
-        "nie:contentCreated": "2020-01-01T00:00:00+00:00",
+        "nie:contentCreated": "2020-01-01T00:00:00Z",
         "nie:copyright": "none",
         "nie:title": "track title",
         "nmm:trackNumber": "12",

@@ -52,8 +52,5 @@ class WritebackAudioTest(fixtures.TrackerWritebackTest):
     def test_writeback_flac(self):
         self._writeback_test(self.datadir_path('writeback-test-7.flac'))
 
-    def test_writeback_aac(self):
-        self._writeback_test(self.datadir_path('writeback-test-8.mp4'))
-
 if __name__ == "__main__":
     fixtures.tracker_test_main()

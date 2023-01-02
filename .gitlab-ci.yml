@@ -62,9 +62,9 @@ check-merge-request:
 
 .tracker-miners.fedora@common:
   variables:
-    BASE_TAG: '2021-08-04.1'
+    BASE_TAG: '2022-09-01.3'
     FDO_UPSTREAM_REPO: GNOME/tracker
-    FDO_DISTRIBUTION_PACKAGES: 'clang clang-analyzer gcovr git libasan libubsan python3-gobject python3-pip umockdev-devel xmlto uncrustify patch diffutils gstreamer1-plugins-good redhat-rpm-config'
+    FDO_DISTRIBUTION_PACKAGES: 'clang clang-analyzer ffmpeg-free-devel gcovr git libasan libubsan python3-gobject python3-pip umockdev-devel xmlto uncrustify patch diffutils gstreamer1-plugins-good redhat-rpm-config'
     FDO_DISTRIBUTION_EXEC: |
       dnf install -y 'dnf-command(builddep)' &&
       dnf builddep -y tracker tracker-miners --setopt=install_weak_deps=False &&
@@ -184,6 +184,16 @@ check-code-style:
     paths:
       - build
 
+.build-libav-template: &build-libav
+  <<: *build
+  script:
+    - .gitlab-ci/checkout-tracker.sh
+    - echo "Building tracker.git commit $(git -C ./subprojects/tracker rev-parse HEAD)"
+    - mkdir build
+    - cd build
+    - meson .. --prefix=/usr -Dtracker_core=subproject -Db_lto=true -Db_coverage=true -Dtests_tap_protocol=true -Dtracker:docs=false -Dgeneric_media_extractor=libav
+    - ninja
+
 build-fedora@x86_64:
   extends:
     - .fdo.distribution-image@fedora
@@ -191,6 +201,14 @@ build-fedora@x86_64:
   needs:
     - build-fedora-container@x86_64
   <<: *build
+
+build-libav-fedora@x86_64:
+  extends:
+    - .fdo.distribution-image@fedora
+    - .tracker-miners.fedora:36@x86_64
+  needs:
+    - build-fedora-container@x86_64
+  <<: *build-libav
 
 build-fedora-rawhide@x86_64:
   extends:
@@ -268,6 +286,14 @@ test-fedora@x86_64:
     - .tracker-miners.fedora:36@x86_64
   needs:
     - build-fedora@x86_64
+  <<: *test
+
+test-libav-fedora@x86_64:
+  extends:
+    - .fdo.distribution-image@fedora
+    - .tracker-miners.fedora:36@x86_64
+  needs:
+    - build-libav-fedora@x86_64
   <<: *test
 
 test-fedora-rawhide@x86_64:

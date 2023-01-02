@@ -78,8 +78,8 @@ option('battery_detection', type: 'combo', choices: ['auto', 'hal', 'upower', 'n
        description: 'Enable upower or HAL for battery/mains power detection')
 option('charset_detection', type: 'combo', choices: ['auto', 'enca', 'icu', 'none'], value: 'auto',
        description: 'Enable enca or libicu for charset detection in MP3s')
-option('generic_media_extractor', type: 'combo', choices: ['auto', 'gstreamer', 'libav', 'none'], value: 'auto',
-       description: 'Enables one of the (gstreamer, libav, auto) generic media extractor backends')
+option('generic_media_extractor', type: 'combo', choices: ['auto', 'gstreamer', 'ffmpeg', 'libav', 'none'], value: 'gstreamer',
+       description: 'Enables one of the (gstreamer, ffmpeg, libav) generic media extractor backends')
 option('gstreamer_backend', type: 'combo', choices: ['discoverer', 'gupnp'], value: 'discoverer',
        description: 'When GStreamer is used, this enables one of the (discoverer, gupnp) GStreamer backends')
 

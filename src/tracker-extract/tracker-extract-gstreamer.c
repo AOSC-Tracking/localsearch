@@ -207,15 +207,25 @@ get_gst_date_time_to_buf (GstDateTime *date_time,
 		complete = FALSE;
 	}
 
-	snprintf (buf, size, "%04d-%02d-%02dT%02d:%02d:%02d%s%02d:00",
-	          year,
-	          month,
-	          day,
-	          hour,
-	          minute,
-	          second,
-	          offset_str,
-	          (gint) ABS (offset));
+	if (offset == 0.0) {
+		snprintf (buf, size, "%04d-%02d-%02dT%02d:%02d:%02dZ",
+		          year,
+		          month,
+		          day,
+		          hour,
+		          minute,
+		          second);
+	} else {
+		snprintf (buf, size, "%04d-%02d-%02dT%02d:%02d:%02d%s%02d:00",
+		          year,
+		          month,
+		          day,
+		          hour,
+		          minute,
+		          second,
+		          offset_str,
+		          (gint) ABS (offset));
+	}
 
 	return complete;
 }

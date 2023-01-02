@@ -265,7 +265,11 @@ elif get_option('generic_media_extractor') == 'gstreamer'
   else
     error('GStreamer media handler was enabled but required GStreamer libraries were not found')
   endif
-elif get_option('generic_media_extractor') == 'libav'
+elif get_option('generic_media_extractor') in ['libav', 'ffmpeg']
+  avcodec = dependency('libavcodec', version: '>= 0.8.4', required: false)
+  avformat = dependency('libavformat', version: '>= 0.8.4', required: false)
+  avutil = dependency('libavutil', version: '>= 0.8.4', required: false)
+
   if avcodec.found() and avformat.found() and avutil.found()
     generic_media_handler = [avcodec, avformat, avutil]
     generic_media_handler_name = 'libav'

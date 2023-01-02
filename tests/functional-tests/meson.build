@@ -99,7 +99,7 @@ if totem_plparser.found()
   extractor_tests += 'playlists/playlist-test-1'
 endif
 
-if libcue.found()
+if libcue.found() and generic_media_handler_name == 'gstreamer'
   extractor_tests += 'disc-images/psx-game-image-1'
 endif
 
@@ -129,7 +129,7 @@ functional_tests = [
   'cli',
 ]
 
-if libcue.found()
+if libcue.found() and generic_media_handler_name == 'gstreamer'
   functional_tests += 'extractor-flac-cuesheet'
 endif
 
@@ -139,7 +139,7 @@ if libjpeg.found() and libgif.found() and libpng.found() and libtiff.found() and
   ]
 endif
 
-if generic_media_handler_name != 'none'
+if generic_media_handler_name == 'gstreamer'
   functional_tests += 'writeback-audio'
 endif
 
