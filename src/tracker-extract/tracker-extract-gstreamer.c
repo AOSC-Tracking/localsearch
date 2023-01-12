@@ -1454,33 +1454,42 @@ tracker_extract_get_metadata (TrackerExtractInfo  *info,
 	return TRUE;
 }
 
+static gboolean
+filter_hw_decoders (GstPluginFeature *feature,
+		    gpointer          user_data)
+{
+	GstElementFactory *factory;
+
+	if (!GST_IS_ELEMENT_FACTORY (feature))
+		return FALSE;
+
+	factory = GST_ELEMENT_FACTORY (feature);
+	if (!gst_element_factory_list_is_type (factory,
+					       GST_ELEMENT_FACTORY_TYPE_DECODER |
+					       GST_ELEMENT_FACTORY_TYPE_MEDIA_VIDEO |
+					       GST_ELEMENT_FACTORY_TYPE_MEDIA_IMAGE)) {
+		return FALSE;
+	}
+
+	return gst_element_factory_list_is_type (factory,
+						 GST_ELEMENT_FACTORY_TYPE_HARDWARE);
+}
+
 G_MODULE_EXPORT gboolean
 tracker_extract_module_init (GError **error)
 {
 	/* Lifted from totem-video-thumbnailer */
-	const gchar *blocklisted[] = {
-		"bcmdec",
-		"fluidsynthmidi",
-		"vaapi",
-		"video4linux2",
-		"nvcodec",
-		"ges",
-	};
 	GstRegistry *registry;
-	guint i;
+	GList *l, *hw_list;
 
 	gst_init (NULL, NULL);
 	registry = gst_registry_get ();
+	hw_list = gst_registry_feature_filter (registry, filter_hw_decoders, FALSE, NULL);
 
-	for (i = 0; i < G_N_ELEMENTS (blocklisted); i++) {
-		GstPlugin *plugin =
-			gst_registry_find_plugin (registry,
-			                          blocklisted[i]);
-		if (plugin) {
-			g_debug ("Removing GStreamer plugin '%s' from registry",
-			         blocklisted[i]);
-			gst_registry_remove_plugin (registry, plugin);
-		}
+	for (l = hw_list; l != NULL; l = l->next) {
+		g_debug ("Disabling feature %s",
+			 gst_plugin_feature_get_name (l->data));
+		gst_registry_remove_feature (registry, l->data);
 	}
 
 	return TRUE;
