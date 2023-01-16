@@ -1464,12 +1464,6 @@ filter_hw_decoders (GstPluginFeature *feature,
 		return FALSE;
 
 	factory = GST_ELEMENT_FACTORY (feature);
-	if (!gst_element_factory_list_is_type (factory,
-					       GST_ELEMENT_FACTORY_TYPE_DECODER |
-					       GST_ELEMENT_FACTORY_TYPE_MEDIA_VIDEO |
-					       GST_ELEMENT_FACTORY_TYPE_MEDIA_IMAGE)) {
-		return FALSE;
-	}
 
 	return gst_element_factory_list_is_type (factory,
 						 GST_ELEMENT_FACTORY_TYPE_HARDWARE);
