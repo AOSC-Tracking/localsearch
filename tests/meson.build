@@ -14,6 +14,14 @@ test_bus_conf_file = configure_file(
   output: 'test-bus.conf',
   configuration: conf)
 
+testdomainconf = configuration_data()
+testdomainconf.set('TEST_ONTOLOGIES_DIR', tracker_uninstalled_nepomuk_ontologies_dir)
+test_domain_rule = configure_file(
+  input: 'test-domain.rule.in',
+  output: 'test-domain.rule',
+  configuration: testdomainconf
+)
+
 if get_option('functional_tests')
   subdir('functional-tests')
 endif

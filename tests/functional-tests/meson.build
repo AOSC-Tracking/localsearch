@@ -14,7 +14,7 @@ testconf.set('TEST_CLI_DIR', tracker_uninstalled_cli_dir)
 testconf.set('TEST_CLI_SUBCOMMANDS_DIR', tracker_uninstalled_cli_subcommands_dir)
 testconf.set('TEST_DBUS_DAEMON_CONFIG_FILE', build_root / 'tests' / 'test-bus.conf')
 testconf.set('TEST_DCONF_PROFILE', dconf_profile_full_path)
-testconf.set('TEST_DOMAIN_ONTOLOGY_RULE', meson.current_build_dir() / 'test-domain.rule')
+testconf.set('TEST_DOMAIN_ONTOLOGY_RULE', meson.current_build_dir() / '..' / 'test-domain.rule')
 testconf.set('TEST_EXTRACTOR_RULES_DIR', tracker_uninstalled_extract_rules_dir)
 testconf.set('TEST_EXTRACTORS_DIR', tracker_extractors_dir)
 testconf.set('TEST_GSETTINGS_SCHEMA_DIR', tracker_miners_uninstalled_gsettings_schema_dir)
@@ -23,12 +23,6 @@ testconf.set('TEST_ONTOLOGIES_DIR', tracker_uninstalled_nepomuk_ontologies_dir)
 testconf.set('TEST_WRITEBACK_MODULES_DIR', tracker_uninstalled_writeback_modules_dir)
 testconf.set('TEST_TAP_ENABLED', get_option('tests_tap_protocol').to_string())
 testconf.set('TRACKER_EXTRACT_PATH', uninstalled_tracker_extract_path)
-
-test_domain_rule = configure_file(
-  input: 'test-domain.rule.in',
-  output: 'test-domain.rule',
-  configuration: testconf
-)
 
 config_json = configure_file(
   input: 'configuration.json.in',
