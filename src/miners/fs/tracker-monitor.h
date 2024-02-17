@@ -69,7 +69,6 @@ gboolean        tracker_monitor_move                 (TrackerMonitor *monitor,
                                                       GFile          *old_file,
                                                       GFile          *new_file);
 guint           tracker_monitor_get_count            (TrackerMonitor *monitor);
-guint           tracker_monitor_get_ignored          (TrackerMonitor *monitor);
 guint           tracker_monitor_get_limit            (TrackerMonitor *monitor);
 
 TrackerMonitor * tracker_monitor_new (GError **error);

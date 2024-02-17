@@ -44,7 +44,6 @@ struct TrackerMonitorGlibPrivate {
 
 	guint          monitor_limit;
 	gboolean       monitor_limit_warned;
-	guint          monitors_ignored;
 
 	/* For FAM, the _CHANGES_DONE event is not signalled, so we
 	 * have to just use the _CHANGED event instead.
@@ -108,7 +107,6 @@ enum {
 	PROP_ENABLED,
 	PROP_LIMIT,
 	PROP_COUNT,
-	PROP_IGNORED,
 };
 
 static void           tracker_monitor_glib_finalize     (GObject        *object);
@@ -314,7 +312,6 @@ tracker_monitor_glib_class_init (TrackerMonitorGlibClass *klass)
 	g_object_class_override_property (object_class, PROP_ENABLED, "enabled");
 	g_object_class_override_property (object_class, PROP_LIMIT, "limit");
 	g_object_class_override_property (object_class, PROP_COUNT, "count");
-	g_object_class_override_property (object_class, PROP_IGNORED, "ignored");
 }
 
 static MonitorEvent *
@@ -452,9 +449,6 @@ tracker_monitor_glib_get_property (GObject      *object,
 		break;
 	case PROP_COUNT:
 		g_value_set_uint (value, tracker_monitor_get_count (TRACKER_MONITOR (object)));
-		break;
-	case PROP_IGNORED:
-		g_value_set_uint (value, priv->monitors_ignored);
 		break;
 	default:
 		G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -1122,8 +1116,6 @@ tracker_monitor_glib_add (TrackerMonitor *monitor,
 
 	/* Cap the number of monitors */
 	if (g_hash_table_size (priv->monitored_dirs) >= priv->monitor_limit) {
-		priv->monitors_ignored++;
-
 		if (!priv->monitor_limit_warned) {
 			g_warning ("The maximum number of monitors to set (%d) "
 			           "has been reached, not adding any new ones",

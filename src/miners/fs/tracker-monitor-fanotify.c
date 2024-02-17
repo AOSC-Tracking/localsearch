@@ -70,7 +70,6 @@ struct _TrackerMonitorFanotify {
 	ssize_t file_handle_payload;
 	GFile *moved_file;
 	guint limit;
-	guint ignored;
 };
 
 /* Binary compatible with the last portions of fanotify_event_info_fid */
@@ -101,7 +100,6 @@ enum {
 	PROP_ENABLED,
 	PROP_LIMIT,
 	PROP_COUNT,
-	PROP_IGNORED,
 };
 
 static GInitableIface *initable_parent_iface = NULL;
@@ -557,9 +555,6 @@ tracker_monitor_fanotify_get_property (GObject      *object,
 	case PROP_COUNT:
 		g_value_set_uint (value, tracker_monitor_get_count (TRACKER_MONITOR (object)));
 		break;
-	case PROP_IGNORED:
-		g_value_set_uint (value, monitor->ignored);
-		break;
 	default:
 		G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
 	}
@@ -700,10 +695,8 @@ tracker_monitor_fanotify_add (TrackerMonitor *object,
 	if (g_hash_table_contains (monitor->monitored_dirs, file))
 		return TRUE;
 
-	if (g_hash_table_size (monitor->monitored_dirs) > monitor->limit) {
-		monitor->ignored++;
+	if (g_hash_table_size (monitor->monitored_dirs) > monitor->limit)
 		return FALSE;
-	}
 
 	TRACKER_NOTE (MONITORS, g_message ("Added monitor for path:'%s', total monitors:%d",
 	                                   g_file_peek_path (file),
@@ -915,7 +908,6 @@ tracker_monitor_fanotify_class_init (TrackerMonitorFanotifyClass *klass)
 	g_object_class_override_property (object_class, PROP_ENABLED, "enabled");
 	g_object_class_override_property (object_class, PROP_LIMIT, "limit");
 	g_object_class_override_property (object_class, PROP_COUNT, "count");
-	g_object_class_override_property (object_class, PROP_IGNORED, "ignored");
 }
 
 static void
