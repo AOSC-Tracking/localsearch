@@ -1,6 +1,0 @@
-# Output: folderCount
-SELECT
-  (COUNT(?f) AS ?folderCount)
-{
-  ?f a nfo:Folder
-}
