@@ -105,7 +105,6 @@ enum {
 enum {
 	PROP_0,
 	PROP_ENABLED,
-	PROP_LIMIT,
 	PROP_COUNT,
 };
 
@@ -310,7 +309,6 @@ tracker_monitor_glib_class_init (TrackerMonitorGlibClass *klass)
 	monitor_class->get_count = tracker_monitor_glib_get_count;
 
 	g_object_class_override_property (object_class, PROP_ENABLED, "enabled");
-	g_object_class_override_property (object_class, PROP_LIMIT, "limit");
 	g_object_class_override_property (object_class, PROP_COUNT, "count");
 }
 
@@ -443,9 +441,6 @@ tracker_monitor_glib_get_property (GObject      *object,
 	switch (prop_id) {
 	case PROP_ENABLED:
 		g_value_set_boolean (value, priv->enabled);
-		break;
-	case PROP_LIMIT:
-		g_value_set_uint (value, priv->monitor_limit);
 		break;
 	case PROP_COUNT:
 		g_value_set_uint (value, tracker_monitor_get_count (TRACKER_MONITOR (object)));
