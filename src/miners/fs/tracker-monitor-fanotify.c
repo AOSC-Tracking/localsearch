@@ -880,23 +880,6 @@ tracker_monitor_fanotify_move (TrackerMonitor *object,
 	return items_moved > 0;
 }
 
-static gboolean
-tracker_monitor_fanotify_is_watched (TrackerMonitor *object,
-                                     GFile          *file)
-{
-	TrackerMonitorFanotify *monitor = TRACKER_MONITOR_FANOTIFY (object);
-
-	if (!monitor->enabled)
-		return FALSE;
-
-	if (g_hash_table_contains (monitor->monitored_dirs, file)) {
-		return TRUE;
-	} else {
-		return TRACKER_MONITOR_CLASS (tracker_monitor_fanotify_parent_class)->is_watched (object,
-		                                                                                  file);
-	}
-}
-
 static guint
 tracker_monitor_fanotify_get_count (TrackerMonitor *object)
 {
@@ -926,7 +909,6 @@ tracker_monitor_fanotify_class_init (TrackerMonitorFanotifyClass *klass)
 	monitor_class->remove = tracker_monitor_fanotify_remove;
 	monitor_class->remove_recursively = tracker_monitor_fanotify_remove_recursively;
 	monitor_class->move = tracker_monitor_fanotify_move;
-	monitor_class->is_watched = tracker_monitor_fanotify_is_watched;
 	monitor_class->set_enabled = tracker_monitor_fanotify_set_enabled;
 	monitor_class->get_count = tracker_monitor_fanotify_get_count;
 

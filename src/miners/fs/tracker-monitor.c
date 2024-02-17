@@ -277,17 +277,6 @@ tracker_monitor_remove_children_recursively (TrackerMonitor *monitor,
 	                                                                TRUE);
 }
 
-gboolean
-tracker_monitor_is_watched (TrackerMonitor *monitor,
-                            GFile          *file)
-{
-	g_return_val_if_fail (TRACKER_IS_MONITOR (monitor), FALSE);
-	g_return_val_if_fail (G_IS_FILE (file), FALSE);
-
-	return TRACKER_MONITOR_GET_CLASS (monitor)->is_watched (monitor,
-	                                                        file);
-}
-
 guint
 tracker_monitor_get_count (TrackerMonitor *monitor)
 {

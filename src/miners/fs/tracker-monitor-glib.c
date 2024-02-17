@@ -142,8 +142,6 @@ static gboolean tracker_monitor_glib_remove_recursively (TrackerMonitor *monitor
 static gboolean tracker_monitor_glib_move (TrackerMonitor *monitor,
                                            GFile          *file,
                                            GFile          *other_file);
-static gboolean tracker_monitor_glib_is_watched (TrackerMonitor *monitor,
-                                                 GFile          *file);
 static void tracker_monitor_glib_set_enabled (TrackerMonitor *monitor,
                                               gboolean        enabled);
 
@@ -310,7 +308,6 @@ tracker_monitor_glib_class_init (TrackerMonitorGlibClass *klass)
 	monitor_class->remove = tracker_monitor_glib_remove;
 	monitor_class->remove_recursively = tracker_monitor_glib_remove_recursively;
 	monitor_class->move = tracker_monitor_glib_move;
-	monitor_class->is_watched = tracker_monitor_glib_is_watched;
 	monitor_class->set_enabled = tracker_monitor_glib_set_enabled;
 	monitor_class->get_count = tracker_monitor_glib_get_count;
 
@@ -1303,20 +1300,6 @@ monitor_cancel_recursively (TrackerMonitorGlib *monitor,
 	}
 
 	return items_cancelled > 0;
-}
-
-static gboolean
-tracker_monitor_glib_is_watched (TrackerMonitor *monitor,
-                                 GFile          *file)
-{
-	TrackerMonitorGlibPrivate *priv;
-
-	priv = tracker_monitor_glib_get_instance_private (TRACKER_MONITOR_GLIB (monitor));
-
-	if (!priv->enabled)
-		return FALSE;
-
-	return g_hash_table_contains (priv->monitored_dirs, file);
 }
 
 TrackerMonitor *
