@@ -521,22 +521,6 @@ tracker_monitor_fanotify_finalize (GObject *object)
 }
 
 static void
-tracker_monitor_fanotify_set_property (GObject      *object,
-                                       guint         prop_id,
-                                       const GValue *value,
-                                       GParamSpec   *pspec)
-{
-	switch (prop_id) {
-	case PROP_ENABLED:
-		tracker_monitor_set_enabled (TRACKER_MONITOR (object),
-		                             g_value_get_boolean (value));
-		break;
-	default:
-		G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-	}
-}
-
-static void
 tracker_monitor_fanotify_get_property (GObject      *object,
                                        guint         prop_id,
                                        GValue       *value,
@@ -891,7 +875,6 @@ tracker_monitor_fanotify_class_init (TrackerMonitorFanotifyClass *klass)
 	monitor_class = TRACKER_MONITOR_CLASS (klass);
 
 	object_class->finalize = tracker_monitor_fanotify_finalize;
-	object_class->set_property = tracker_monitor_fanotify_set_property;
 	object_class->get_property = tracker_monitor_fanotify_get_property;
 
 	monitor_class->add = tracker_monitor_fanotify_add;
