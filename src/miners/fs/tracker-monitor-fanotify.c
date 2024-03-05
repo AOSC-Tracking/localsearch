@@ -62,6 +62,7 @@ struct _TrackerMonitorFanotify {
 
 	GHashTable *monitored_dirs;
 	GHashTable *handles;
+	GHashTable *disabled_dirs;
 	GHashTable *cached_events;
 	GSource *source;
 	gboolean enabled;
@@ -104,6 +105,10 @@ enum {
 static GInitableIface *initable_parent_iface = NULL;
 
 static void tracker_monitor_fanotify_initable_iface_init (GInitableIface *iface);
+
+static MonitoredFile * monitored_file_new (TrackerMonitorFanotify *monitor,
+                                           GFile                  *file);
+
 static void monitored_file_free (MonitoredFile *data);
 
 G_DEFINE_TYPE_WITH_CODE (TrackerMonitorFanotify, tracker_monitor_fanotify,
@@ -463,34 +468,42 @@ tracker_monitor_fanotify_set_enabled (TrackerMonitor *object,
                                       gboolean        enabled)
 {
 	TrackerMonitorFanotify *monitor = TRACKER_MONITOR_FANOTIFY (object);
-	GList *files = NULL;
+	GHashTableIter iter;
+	GFile *file;
 
 	g_return_if_fail (TRACKER_IS_MONITOR (monitor));
 
 	/* Don't replace all monitors if we are already
 	 * enabled/disabled.
 	 */
-	if (monitor->enabled == enabled) {
+	if (monitor->enabled == enabled)
 		return;
+
+	if (enabled) {
+		g_hash_table_iter_init (&iter, monitor->disabled_dirs);
+
+		while (g_hash_table_iter_next (&iter, (gpointer*) &file, NULL)) {
+			MonitoredFile *data;
+
+			data = monitored_file_new (monitor, file);
+			g_hash_table_insert (monitor->monitored_dirs, g_object_ref (data->file), data);
+			g_hash_table_insert (monitor->handles, data->handle_bytes, data);
+			g_hash_table_iter_remove (&iter);
+		}
+	} else {
+		MonitoredFile *prev_data;
+
+		g_hash_table_iter_init (&iter, monitor->monitored_dirs);
+
+		while (g_hash_table_iter_next (&iter, (gpointer*) &file, (gpointer*) &prev_data)) {
+			g_hash_table_add (monitor->disabled_dirs, g_object_ref (prev_data->file));
+			g_hash_table_remove (monitor->handles, prev_data->handle_bytes);
+			g_hash_table_iter_remove (&iter);
+		}
 	}
 
 	monitor->enabled = enabled;
 	g_object_notify (G_OBJECT (monitor), "enabled");
-
-	/* Get the monitored files, and re-add them all */
-	files = g_hash_table_get_keys (monitor->monitored_dirs);
-	g_list_foreach (files, (GFunc) g_object_ref, NULL);
-	g_hash_table_remove_all (monitor->handles);
-	g_hash_table_remove_all (monitor->monitored_dirs);
-
-	while (files) {
-		GFile *file;
-
-		file = files->data;
-		tracker_monitor_add (TRACKER_MONITOR (monitor), file);
-		files = g_list_remove (files, file);
-		g_object_unref (file);
-	}
 
 	TRACKER_MONITOR_CLASS (tracker_monitor_fanotify_parent_class)->set_enabled (object,
                                                                                     enabled);
@@ -513,6 +526,7 @@ tracker_monitor_fanotify_finalize (GObject *object)
 	g_source_unref (monitor->source);
 
 	g_hash_table_unref (monitor->monitored_dirs);
+	g_hash_table_unref (monitor->disabled_dirs);
 	g_hash_table_unref (monitor->handles);
 	g_hash_table_unref (monitor->cached_events);
 	g_clear_object (&monitor->moved_file);
@@ -695,7 +709,7 @@ tracker_monitor_fanotify_add (TrackerMonitor *object,
 		g_hash_table_insert (monitor->monitored_dirs, g_object_ref (data->file), data);
 		g_hash_table_insert (monitor->handles, data->handle_bytes, data);
 	} else {
-		g_hash_table_insert (monitor->monitored_dirs, g_object_ref (file), NULL);
+		g_hash_table_add (monitor->disabled_dirs, g_object_ref (file));
 	}
 
 	return TRUE;
@@ -717,6 +731,8 @@ tracker_monitor_fanotify_remove (TrackerMonitor *object,
 	}
 
 	if (g_hash_table_remove (monitor->monitored_dirs, file))
+		return TRUE;
+	if (g_hash_table_remove (monitor->disabled_dirs, file))
 		return TRUE;
 
 	return TRACKER_MONITOR_CLASS (tracker_monitor_fanotify_parent_class)->remove (object,
@@ -859,7 +875,11 @@ tracker_monitor_fanotify_get_count (TrackerMonitor *object)
 	TrackerMonitorFanotify *monitor = TRACKER_MONITOR_FANOTIFY (object);
 	guint count;
 
-	count = g_hash_table_size (monitor->monitored_dirs);
+	if (monitor->enabled)
+		count = g_hash_table_size (monitor->monitored_dirs);
+	else
+		count = g_hash_table_size (monitor->disabled_dirs);
+
 	count += TRACKER_MONITOR_CLASS (tracker_monitor_fanotify_parent_class)->get_count (object);
 
 	return count;
@@ -899,6 +919,11 @@ tracker_monitor_fanotify_init (TrackerMonitorFanotify *monitor)
 		                       (GEqualFunc) g_file_equal,
 		                       (GDestroyNotify) g_object_unref,
 		                       (GDestroyNotify) monitored_file_free);
+	monitor->disabled_dirs =
+		g_hash_table_new_full (g_file_hash,
+		                       (GEqualFunc) g_file_equal,
+		                       (GDestroyNotify) g_object_unref,
+		                       NULL);
 	monitor->cached_events =
 		g_hash_table_new_full (g_file_hash,
 		                       (GEqualFunc) g_file_equal,
