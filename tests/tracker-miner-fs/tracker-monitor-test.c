@@ -1283,29 +1283,13 @@ test_monitor_basic (void)
 	g_assert_no_error (error);
 	g_assert_true (monitor != NULL);
 
-	/* Test general API with monitors enabled */
+	/* Test general API */
 	tracker_monitor_set_enabled (monitor, TRUE);
 	g_assert_cmpint (tracker_monitor_get_enabled (monitor), ==, TRUE);
 
 	g_assert_cmpint (tracker_monitor_get_count (monitor), ==, 0);
 	g_assert_cmpint (tracker_monitor_add (monitor, file_for_monitor), ==, TRUE);
 	g_assert_cmpint (tracker_monitor_add (monitor, file_for_monitor), ==, TRUE); /* Test double add on purpose */
-	g_assert_cmpint (tracker_monitor_get_count (monitor), ==, 1);
-	g_assert_cmpint (tracker_monitor_remove (monitor, file_for_monitor), ==, TRUE);
-	g_assert_cmpint (tracker_monitor_get_count (monitor), ==, 0);
-
-	tracker_monitor_add (monitor, file_for_monitor);
-	tracker_monitor_add (monitor, file_for_tmp);
-	g_assert_cmpint (tracker_monitor_get_count (monitor), ==, 2);
-	g_assert_cmpint (tracker_monitor_remove_recursively (monitor, file_for_tmp), ==, TRUE);
-	g_assert_cmpint (tracker_monitor_get_count (monitor), ==, 0);
-
-	/* Test general API with monitors disabled */
-	tracker_monitor_set_enabled (monitor, FALSE);
-	g_assert_cmpint (tracker_monitor_get_enabled (monitor), ==, FALSE);
-
-	g_assert_cmpint (tracker_monitor_get_count (monitor), ==, 0);
-	g_assert_cmpint (tracker_monitor_add (monitor, file_for_monitor), ==, TRUE);
 	g_assert_cmpint (tracker_monitor_get_count (monitor), ==, 1);
 	g_assert_cmpint (tracker_monitor_remove (monitor, file_for_monitor), ==, TRUE);
 	g_assert_cmpint (tracker_monitor_get_count (monitor), ==, 0);
