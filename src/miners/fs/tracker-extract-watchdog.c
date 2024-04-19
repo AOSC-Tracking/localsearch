@@ -26,6 +26,10 @@
 
 #include <sys/socket.h>
 
+#if defined(HAVE_GSTREAMER)
+#include <gst/gst.h>
+#endif
+
 #define REMOTE_FD_NUMBER 3
 #define MINER_FS_NAME "org.freedesktop.Tracker3.Miner.Files"
 
@@ -332,6 +336,10 @@ wait_check_async_cb (GObject      *object,
 
 	clear_process_state (watchdog);
 
+#if defined(HAVE_GSTREAMER)
+	gst_deinit ();
+#endif
+
 	g_signal_emit (watchdog, signals[STATUS], 0, "Idle", 1.0, 0);
 }
 
@@ -438,6 +446,13 @@ tracker_extract_watchdog_ensure_started (TrackerExtractWatchdog *watchdog)
 		g_critical ("Could not setup context to spawn metadata extractor: %s", error->message);
 		return;
 	}
+
+#if defined(HAVE_GSTREAMER)
+	/* Preempt possible registry updates, before tracker-extract-3 deals
+	 * with gstreamer plugins.
+	 */
+	gst_init (NULL, NULL);
+#endif
 
 	current_dir = g_get_current_dir ();
 
