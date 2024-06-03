@@ -71,9 +71,6 @@ static gboolean list_miners_available;
 static gboolean pause_details;
 
 static gboolean list_processes;
-static gboolean start;
-static gboolean kill_miners;
-static gboolean terminate_miners;
 static gchar *backup;
 static gchar *restore;
 
@@ -87,9 +84,6 @@ static gchar *restore;
 	  list_miners_available || \
 	  pause_details) || \
 	 (list_processes || \
-	  start || \
-	  kill_miners || \
-	  terminate_miners || \
 	  backup || \
 	  restore));
 
@@ -151,15 +145,6 @@ static GOptionEntry entries[] = {
 	/* Processes */
 	{ "list-processes", 'p', 0, G_OPTION_ARG_NONE, &list_processes,
 	  N_("List all Tracker processes") },
-	{ "kill", 'k', 0, G_OPTION_ARG_NONE, &kill_miners,
-	  N_("Use SIGKILL to stop all miners"),
-	  N_("APPS") },
-	{ "terminate", 't', 0, G_OPTION_ARG_NONE, &terminate_miners,
-	  N_("Use SIGTERM to stop all miners"),
-	  N_("APPS") },
-	{ "start", 's', 0, G_OPTION_ARG_NONE, &start,
-	  N_("Starts miners"),
-	  NULL },
 	{ NULL }
 };
 
@@ -917,16 +902,7 @@ daemon_run (void)
 		return miner_pause_details ();
 	}
 
-	/* Processes */
-	GError *error = NULL;
-
 	/* Constraints */
-
-	if (kill_miners && terminate_miners) {
-		g_printerr ("%s\n",
-		            _("You can not use the --kill and --terminate arguments together"));
-		return EXIT_FAILURE;
-	}
 
 	if (list_processes) {
 		GSList *pids, *l;
@@ -952,66 +928,6 @@ daemon_run (void)
 
 		g_slist_foreach (pids, (GFunc) tracker_process_data_free, NULL);
 		g_slist_free (pids);
-
-		return EXIT_SUCCESS;
-	}
-
-	if (kill_miners || terminate_miners) {
-		gint retval = 0;
-
-		if (kill_miners)
-			retval = tracker_process_stop (SIGKILL);
-		else if (terminate_miners)
-			retval = tracker_process_stop (SIGTERM);
-
-		return retval;
-	}
-
-	if (start) {
-		TrackerMinerManager *manager;
-		GSList *miners, *l;
-
-		g_print ("%s\n", _("Starting miners…"));
-
-		/* Auto-start the miners here */
-		manager = tracker_miner_manager_new_full (TRUE, &error);
-		if (!manager) {
-			g_printerr (_("Could not start miners, manager could not be created, %s"),
-			            error ? error->message : _("No error given"));
-			g_printerr ("\n");
-			g_clear_error (&error);
-			return EXIT_FAILURE;
-		}
-
-		miners = tracker_miner_manager_get_available (manager);
-
-		/* Get the status of all miners, this will start all
-		 * miners not already running.
-		 */
-		for (l = miners; l; l = l->next) {
-			const gchar *display_name;
-			gdouble progress = 0.0;
-
-			display_name = tracker_miner_manager_get_display_name (manager, l->data);
-
-			if (!tracker_miner_manager_get_status (manager,
-			                                       l->data,
-			                                       NULL,
-			                                       &progress,
-			                                       NULL)) {
-				g_printerr ("  ✗ %s (%s)\n",
-				            display_name,
-				            _("perhaps a disabled plugin?"));
-			} else {
-				g_print ("  ✓ %s\n",
-				         display_name);
-			}
-
-			g_free (l->data);
-		}
-
-		g_slist_free (miners);
-		g_object_unref (manager);
 
 		return EXIT_SUCCESS;
 	}
