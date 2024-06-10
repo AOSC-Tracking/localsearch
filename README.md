@@ -1,42 +1,36 @@
-# Tracker Miners
+# LocalSearch
 
-Tracker is an efficient search engine and
-[triplestore](https://en.wikipedia.org/wiki/Triplestore) for desktop, embedded
-and mobile.
+LocalSearch is the file search framework of the GNOME desktop. It stores
+data about user files structured by the
+[Nepomuk definitions](https://gnome.pages.gitlab.gnome.org/tinysparql/ontologies.html#nepomuk),
+features a tightly sandboxed metadata extractor, and provides facilities to alter
+file metadata.
 
-The Tracker project is divided into two main repositories:
+The data is exposed through a SPARQL endpoint, applications can access
+this data via [a portal](https://gnome.pages.gitlab.gnome.org/tinysparql/sandboxing.html).
 
-  * [Tracker SPARQL](https://gitlab.gnome.org/GNOME/tracker) contains the
-    triplestore database, provided as the `libtracker-sparql` library
-    and implemented using [SQLite](http://sqlite.org/). This repo also contains
-    the database ontologies and the commandline user interface (`tracker3`).
+See the [available documentation](https://gnome.pages.gitlab.gnome.org/localsearch).
 
-  * [Tracker Miners](https://gitlab.gnome.org/GNOME/tracker-miners) contains
-    the indexer daemon (*tracker-miner-fs-3*) and tools to extract metadata
-    from many different filetypes.
+# Contact
 
-Documentation on Tracker Miners can be found here:
+LocalSearch is a free software project developed in the open by contributors. You
+can make questions about it at:
 
-  * <https://gnome.pages.gitlab.gnome.org/tracker-miners>
+  * [Matrix](https://matrix.to/#/#tracker:gnome.org)
+  * [GNOME Discourse](https://discourse.gnome.org/tag/tracker)
 
-Source code and issue tracking:
+# Reporting issues
 
-  * <https://gitlab.gnome.org/GNOME/tracker>
-  * <https://gitlab.gnome.org/GNOME/tracker-miners>
+If you found an issue in LocalSearch, a bug report at
+https://gitlab.gnome.org/GNOME/localsearch/issues will be welcome. Please
+see the [GNOME bug reporting guidelines](https://handbook.gnome.org/issues/reporting.html)
+for reported bugs.
 
-All discussion related to Tracker happens on:
+# Contributing
 
-  * <https://discourse.gnome.org/tag/tracker>
+Your contributions are greatly appreciated! As LocalSearch uses the Meson
+build system, the [GNOME handbook](https://handbook.gnome.org/development/building.html)
+greatly applies to it. LocalSearch will typically be a D-Bus service running in the
+host, you can consider the Toolbx/JHBuild approaches to build it individually.
 
-IRC channel #tracker on:
-
-  * [irc.gimp.net](irc://irc.gimp.net)
-
-Related projects:
-
-  * [GNOME Online Miners](https://gitlab.gnome.org/GNOME/gnome-online-miners/)
-    extends Tracker to allow searching and indexing some kinds of online
-    content.
-
-For more information about developing Tracker, look at the
-[README.md file in Tracker core](https://gitlab.gnome.org/GNOME/tracker/tree/master/README.md).
+For more information on the code itself, see the [hacking documentation](HACKING.md).
