@@ -5,15 +5,10 @@
          xmlns="http://usefulinc.com/ns/doap#">
 
   <name xml:lang="en">LocalSearch</name>
-  <shortdesc xml:lang="en">Collection of data extractors for Tracker/Nepomuk</shortdesc>
-  <description>Tracker is a semantic data storage for desktop and mobile devices.
-Tracker uses W3C standards for RDF ontologies using Nepomuk with
-SPARQL to query and update the data.
-
-Tracker is a central repository of user information, that provides two
-big benefits for the user; shared data between applications and
-information which is relational to other information (for example:
-mixing contacts with files, locations, activities and etc.).</description>
+  <shortdesc xml:lang="en">Framework for filesystem local search and metadata management</shortdesc>
+  <description>LocalSearch is the file search framework of the GNOME desktop. It stores
+data about user files structured by the Nepomuk definitions, features a tightly sandboxed
+metadata extractor, and provides facilities to alter file metadata.</description>
   <homepage rdf:resource="https://gnome.pages.gitlab.gnome.org/localsearch/" />
   <developer-forum rdf:resource="https://discourse.gnome.org/tag/tracker" />
   <download-page rdf:resource="http://download.gnome.org/sources/localsearch/" />
