@@ -461,6 +461,7 @@ endif
 subdir('tests')
 
 run_uninstalled_conf = configuration_data()
+run_uninstalled_conf.set('global_build_root', meson.global_build_root())
 run_uninstalled_conf.set('tracker_sparql_uninstalled_dir', tracker_sparql_uninstalled_dir)
 run_uninstalled_conf.set('tracker_uninstalled_cli_dir', tracker_uninstalled_cli_dir)
 run_uninstalled_conf.set('tracker_uninstalled_domain_rule', meson.current_build_dir() / 'tests' / 'functional-tests' / 'config' / 'test-domain.rule')

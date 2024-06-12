@@ -25,6 +25,18 @@ import os
 import pathlib
 import sys
 
+global_build_root = "@global_build_root@"
+if not os.path.samefile(os.getcwd(), global_build_root):
+    # There are codepaths in Tracker SPARQL that load libraries from buildtree
+    # when cwd == global_build_root, exit now if that's not the case to avoid
+    # errors later.
+    sys.stderr.write(
+        "This script must be run from the build root directory: "
+        f"{global_build_root}\n"
+    )
+    sys.exit(2)
+
+
 cli_dir = "@tracker_uninstalled_cli_dir@"
 tracker_sparql_dir = "@tracker_sparql_uninstalled_dir@"
 testutils_dir = "@tracker_uninstalled_testutils_dir@"
