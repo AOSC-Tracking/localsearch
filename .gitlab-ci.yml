@@ -454,8 +454,10 @@ coverity:
   allow_failure: true
   script:
     # Build tracker, we must go out the subproject route as we don't want
-    # tracker code to be included in the coverity reports for tracker-miners.
+    # tinysparql code to be included in the coverity reports for localsearch.
     - export INSTALL=`pwd`/install
+    - git clone https://gitlab.gnome.org/GNOME/tinysparql.git
+    - pushd tinysparql; meson build --libdir lib --prefix $INSTALL -Ddocs=false; ninja -C build install; popd
     - curl https://scan.coverity.com/download/linux64 --data "token=$COVERITY_TOKEN&project=tracker-miners" --output /tmp/coverity_tool.tgz
     - tar zxf /tmp/coverity_tool.tgz
     - mkdir coverity-build
