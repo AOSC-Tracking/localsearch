@@ -36,10 +36,6 @@
 #include <glib-object.h>
 #include <glib/gi18n.h>
 
-#if defined(HAVE_GSTREAMER)
-#include <gst/gst.h>
-#endif
-
 #include <libtracker-miners-common/tracker-common.h>
 
 #include "tracker-config.h"
@@ -843,13 +839,6 @@ main (gint argc, gchar *argv[])
 	 * are many concurrently running queries through the endpoint.
 	 */
 	raise_file_descriptor_limit ();
-
-	/* Preempt possible registry updates, before tracker-extract-3 deals
-	 * with gstreamer plugins.
-	 */
-#if defined(HAVE_GSTREAMER)
-	gst_init (NULL, NULL);
-#endif
 
 	/* Translators: this messagge will apper immediately after the
 	 * usage string - Usage: COMMAND <THIS_MESSAGE>
