@@ -47,8 +47,8 @@
 
 #include "tracker-main.h"
 
-/* Time in seconds before we stop processing content */
-#define EXTRACTION_PROCESS_TIMEOUT 10
+/* Default time before we stop processing content */
+#define DEFAULT_DEADLINE_SECONDS 10
 
 typedef struct {
 	gchar *title;
@@ -196,6 +196,9 @@ extract_content_text (PopplerDocument *document,
 {
 	GString *string;
 	GTimer *timer;
+	const gchar *deadline_envvar;
+	gint deadline_seconds;
+
 	gsize remaining_bytes;
 	gint n_pages, i;
 	gdouble elapsed;
@@ -204,8 +207,16 @@ extract_content_text (PopplerDocument *document,
 	string = g_string_new ("");
 	timer = g_timer_new ();
 
+	/* enforcing this timeout here for standalone mode */
+	deadline_envvar = g_getenv ("TRACKER_EXTRACT_DEADLINE");
+	if (deadline_envvar) {
+		deadline_seconds = atoi (deadline_envvar);
+	} else {
+		deadline_seconds = DEFAULT_DEADLINE_SECONDS;
+	}
+
 	for (i = 0, remaining_bytes = n_bytes, elapsed = g_timer_elapsed (timer, NULL);
-	     i < n_pages && remaining_bytes > 0 && elapsed < EXTRACTION_PROCESS_TIMEOUT;
+	     i < n_pages && remaining_bytes > 0 && elapsed < deadline_seconds;
 	     i++, elapsed = g_timer_elapsed (timer, NULL)) {
 		PopplerPage *page;
 		gsize written_bytes = 0;
@@ -236,8 +247,8 @@ extract_content_text (PopplerDocument *document,
 		g_object_unref (page);
 	}
 
-	if (elapsed >= EXTRACTION_PROCESS_TIMEOUT) {
-		g_debug ("Extraction timed out, %d seconds reached", EXTRACTION_PROCESS_TIMEOUT);
+	if (elapsed >= deadline_seconds) {
+		g_debug ("Extraction timed out, %d seconds reached", deadline_seconds);
 	}
 
 	g_debug ("Content extraction finished: %d/%d pages indexed in %2.2f seconds, "
