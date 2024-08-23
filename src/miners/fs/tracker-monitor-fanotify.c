@@ -62,6 +62,7 @@ struct _TrackerMonitorFanotify {
 
 	GHashTable *monitored_dirs;
 	GHashTable *handles;
+	GHashTable *disabled_dirs;
 	GHashTable *cached_events;
 	GSource *source;
 	gboolean enabled;
@@ -70,7 +71,6 @@ struct _TrackerMonitorFanotify {
 	ssize_t file_handle_payload;
 	GFile *moved_file;
 	guint limit;
-	guint ignored;
 };
 
 /* Binary compatible with the last portions of fanotify_event_info_fid */
@@ -81,7 +81,7 @@ typedef struct {
 
 typedef struct {
 	TrackerMonitorFanotify *monitor;
-	GFile *file;
+	gchar *path;
 	GBytes *handle_bytes;
 	/* This must be last in the struct */
 	HandleData handle;
@@ -99,14 +99,16 @@ enum {
 enum {
 	PROP_0,
 	PROP_ENABLED,
-	PROP_LIMIT,
 	PROP_COUNT,
-	PROP_IGNORED,
 };
 
 static GInitableIface *initable_parent_iface = NULL;
 
 static void tracker_monitor_fanotify_initable_iface_init (GInitableIface *iface);
+
+static MonitoredFile * monitored_file_new (TrackerMonitorFanotify *monitor,
+                                           const gchar            *path);
+
 static void monitored_file_free (MonitoredFile *data);
 
 G_DEFINE_TYPE_WITH_CODE (TrackerMonitorFanotify, tracker_monitor_fanotify,
@@ -386,10 +388,14 @@ fanotify_events_cb (int          fd,
 		/* File name comes after the file handle data */
 		file_name = handle->handle.f_handle + handle->handle.handle_bytes;
 
-		if (g_strcmp0 (file_name, ".") == 0)
-			child = g_object_ref (data->file);
-		else
-			child = g_file_get_child (data->file, file_name);
+		if (g_strcmp0 (file_name, ".") == 0) {
+			child = g_file_new_for_path (data->path);
+		} else {
+			g_autofree gchar *child_path = NULL;
+
+			child_path = g_build_filename (data->path, file_name, NULL);
+			child = g_file_new_for_path (child_path);
+		}
 
 		/* We have a pending MOVED_FROM event, now unpaired. Flush
 		 * it as a DELETE event, since it's moving outside our
@@ -478,34 +484,42 @@ tracker_monitor_fanotify_set_enabled (TrackerMonitor *object,
                                       gboolean        enabled)
 {
 	TrackerMonitorFanotify *monitor = TRACKER_MONITOR_FANOTIFY (object);
-	GList *files = NULL;
+	GHashTableIter iter;
+	const gchar *path;
 
 	g_return_if_fail (TRACKER_IS_MONITOR (monitor));
 
 	/* Don't replace all monitors if we are already
 	 * enabled/disabled.
 	 */
-	if (monitor->enabled == enabled) {
+	if (monitor->enabled == enabled)
 		return;
+
+	if (enabled) {
+		g_hash_table_iter_init (&iter, monitor->disabled_dirs);
+
+		while (g_hash_table_iter_next (&iter, (gpointer*) &path, NULL)) {
+			MonitoredFile *data;
+
+			data = monitored_file_new (monitor, path);
+			g_hash_table_insert (monitor->monitored_dirs, data->path, data);
+			g_hash_table_insert (monitor->handles, data->handle_bytes, data);
+			g_hash_table_iter_remove (&iter);
+		}
+	} else {
+		MonitoredFile *prev_data;
+
+		g_hash_table_iter_init (&iter, monitor->monitored_dirs);
+
+		while (g_hash_table_iter_next (&iter, (gpointer*) &path, (gpointer*) &prev_data)) {
+			g_hash_table_add (monitor->disabled_dirs, g_strdup (prev_data->path));
+			g_hash_table_remove (monitor->handles, prev_data->handle_bytes);
+			g_hash_table_iter_remove (&iter);
+		}
 	}
 
 	monitor->enabled = enabled;
 	g_object_notify (G_OBJECT (monitor), "enabled");
-
-	/* Get the monitored files, and re-add them all */
-	files = g_hash_table_get_keys (monitor->monitored_dirs);
-	g_list_foreach (files, (GFunc) g_object_ref, NULL);
-	g_hash_table_remove_all (monitor->handles);
-	g_hash_table_remove_all (monitor->monitored_dirs);
-
-	while (files) {
-		GFile *file;
-
-		file = files->data;
-		tracker_monitor_add (TRACKER_MONITOR (monitor), file);
-		files = g_list_remove (files, file);
-		g_object_unref (file);
-	}
 
 	TRACKER_MONITOR_CLASS (tracker_monitor_fanotify_parent_class)->set_enabled (object,
                                                                                     enabled);
@@ -530,27 +544,12 @@ tracker_monitor_fanotify_finalize (GObject *object)
 	}
 
 	g_hash_table_unref (monitor->monitored_dirs);
+	g_hash_table_unref (monitor->disabled_dirs);
 	g_hash_table_unref (monitor->handles);
 	g_hash_table_unref (monitor->cached_events);
 	g_clear_object (&monitor->moved_file);
 
 	G_OBJECT_CLASS (tracker_monitor_fanotify_parent_class)->finalize (object);
-}
-
-static void
-tracker_monitor_fanotify_set_property (GObject      *object,
-                                       guint         prop_id,
-                                       const GValue *value,
-                                       GParamSpec   *pspec)
-{
-	switch (prop_id) {
-	case PROP_ENABLED:
-		tracker_monitor_set_enabled (TRACKER_MONITOR (object),
-		                             g_value_get_boolean (value));
-		break;
-	default:
-		G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-	}
 }
 
 static void
@@ -565,14 +564,8 @@ tracker_monitor_fanotify_get_property (GObject      *object,
 	case PROP_ENABLED:
 		g_value_set_boolean (value, monitor->enabled);
 		break;
-	case PROP_LIMIT:
-		g_value_set_uint (value, monitor->limit);
-		break;
 	case PROP_COUNT:
 		g_value_set_uint (value, tracker_monitor_get_count (TRACKER_MONITOR (object)));
-		break;
-	case PROP_IGNORED:
-		g_value_set_uint (value, monitor->ignored);
 		break;
 	default:
 		G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -581,12 +574,8 @@ tracker_monitor_fanotify_get_property (GObject      *object,
 
 static gboolean
 add_mark (TrackerMonitorFanotify *monitor,
-          GFile                  *file)
+          const gchar            *path)
 {
-	gchar *path;
-
-	path = g_file_get_path (file);
-
 	if (fanotify_mark (monitor->fanotify_fd,
 	                   (FAN_MARK_ADD | FAN_MARK_ONLYDIR),
 	                   FANOTIFY_EVENTS,
@@ -600,18 +589,13 @@ add_mark (TrackerMonitorFanotify *monitor,
 		return FALSE;
 	}
 
-	g_free (path);
 	return TRUE;
 }
 
 static void
 remove_mark (TrackerMonitorFanotify *monitor,
-             GFile                  *file)
+             const gchar            *path)
 {
-	gchar *path;
-
-	path = g_file_get_path (file);
-
 	if (fanotify_mark (monitor->fanotify_fd,
 	                   FAN_MARK_REMOVE,
 	                   FANOTIFY_EVENTS,
@@ -620,26 +604,20 @@ remove_mark (TrackerMonitorFanotify *monitor,
 		if (errno != ENOENT)
 			g_warning ("Could not remove mark for path '%s': %m", path);
 	}
-
-	g_free (path);
 }
 
 static MonitoredFile *
 monitored_file_new (TrackerMonitorFanotify *monitor,
-                    GFile                  *file)
+                    const gchar            *path)
 {
 	MonitoredFile *data;
-	gchar *path;
 	struct statfs buf;
 	int mntid;
 	gboolean mark_added = FALSE;
 
-	path = g_file_get_path (file);
-
 	if (statfs (path, &buf) < 0) {
 		if (errno != ENOENT)
 			g_warning ("Could not get filesystem ID for %s: %m", path);
-		g_free (path);
 		return NULL;
 	}
 
@@ -669,18 +647,15 @@ retry:
 
 		g_slice_free1 (sizeof (MonitoredFile) +
 			       monitor->file_handle_payload, data);
-		g_free (path);
 		return NULL;
 	}
 
-	data->file = g_object_ref (file);
+	data->path = g_strdup (path);
 	data->monitor = monitor;
 	memcpy (&data->handle.fsid, &buf.f_fsid, sizeof(fsid_t));
-	mark_added = add_mark (monitor, file);
-	g_free (path);
+	mark_added = add_mark (monitor, data->path);
 
 	if (!mark_added) {
-		g_object_unref (data->file);
 		g_slice_free1 (sizeof (MonitoredFile) +
 			       data->handle.handle.handle_bytes, data);
 		return NULL;
@@ -698,8 +673,8 @@ monitored_file_free (MonitoredFile *data)
 		return;
 
 	g_bytes_unref (data->handle_bytes);
-	remove_mark (data->monitor, data->file);
-	g_object_unref (data->file);
+	remove_mark (data->monitor, data->path);
+	g_free (data->path);
 	g_slice_free1 (sizeof (MonitoredFile) +
 	               data->handle.handle.handle_bytes, data);
 }
@@ -710,21 +685,28 @@ tracker_monitor_fanotify_add (TrackerMonitor *object,
 {
 	TrackerMonitorFanotify *monitor = TRACKER_MONITOR_FANOTIFY (object);
 	MonitoredFile *data;
+	g_autofree gchar *path = NULL;
 
-	if (g_hash_table_contains (monitor->monitored_dirs, file))
-		return TRUE;
+	path = g_file_get_path (file);
 
-	if (g_hash_table_size (monitor->monitored_dirs) > monitor->limit) {
-		monitor->ignored++;
-		return FALSE;
+	if (!path) {
+		/* If file does not resolve to a local path, attempt with GLib */
+		return TRACKER_MONITOR_CLASS (tracker_monitor_fanotify_parent_class)->add (object,
+		                                                                           file);
 	}
 
+	if (g_hash_table_contains (monitor->monitored_dirs, path))
+		return TRUE;
+
+	if (g_hash_table_size (monitor->monitored_dirs) > monitor->limit)
+		return FALSE;
+
 	TRACKER_NOTE (MONITORS, g_message ("Added monitor for path:'%s', total monitors:%d",
-	                                   g_file_peek_path (file),
+	                                   path,
 	                                   g_hash_table_size (monitor->monitored_dirs)));
 
 	if (monitor->enabled) {
-		data = monitored_file_new (monitor, file);
+		data = monitored_file_new (monitor, path);
 		if (!data) {
 			/* If we cannot create fanotify handles (e.g. EXDEV on
 			 * btrfs), fall back to inotify.
@@ -733,10 +715,10 @@ tracker_monitor_fanotify_add (TrackerMonitor *object,
 			                                                                           file);
 		}
 
-		g_hash_table_insert (monitor->monitored_dirs, g_object_ref (data->file), data);
+		g_hash_table_insert (monitor->monitored_dirs, data->path, data);
 		g_hash_table_insert (monitor->handles, data->handle_bytes, data);
 	} else {
-		g_hash_table_insert (monitor->monitored_dirs, g_object_ref (file), NULL);
+		g_hash_table_add (monitor->disabled_dirs, g_steal_pointer (&path));
 	}
 
 	return TRUE;
@@ -748,8 +730,17 @@ tracker_monitor_fanotify_remove (TrackerMonitor *object,
 {
 	TrackerMonitorFanotify *monitor = TRACKER_MONITOR_FANOTIFY (object);
 	MonitoredFile *data;
+	g_autofree gchar *path = NULL;
 
-	data = g_hash_table_lookup (monitor->monitored_dirs, file);
+	path = g_file_get_path (file);
+
+	if (!path) {
+		/* If file does not resolve to a local path, attempt with GLib */
+		return TRACKER_MONITOR_CLASS (tracker_monitor_fanotify_parent_class)->remove (object,
+		                                                                              file);
+	}
+
+	data = g_hash_table_lookup (monitor->monitored_dirs, path);
 	if (data) {
 		g_hash_table_remove (monitor->handles, data->handle_bytes);
 		TRACKER_NOTE (MONITORS, g_message ("Removed monitor for path:'%s', total monitors:%d",
@@ -757,7 +748,9 @@ tracker_monitor_fanotify_remove (TrackerMonitor *object,
 		                                   g_hash_table_size (monitor->monitored_dirs) - 1));
 	}
 
-	if (g_hash_table_remove (monitor->monitored_dirs, file))
+	if (g_hash_table_remove (monitor->monitored_dirs, path))
+		return TRUE;
+	if (g_hash_table_remove (monitor->disabled_dirs, path))
 		return TRUE;
 
 	return TRACKER_MONITOR_CLASS (tracker_monitor_fanotify_parent_class)->remove (object,
@@ -768,12 +761,15 @@ tracker_monitor_fanotify_remove (TrackerMonitor *object,
  * If @is_strict is %FALSE, additionally return %TRUE if @file equals @prefix.
  */
 static gboolean
-file_has_maybe_strict_prefix (GFile    *file,
-                              GFile    *prefix,
-                              gboolean  is_strict)
+path_has_prefix (const gchar *path,
+                 const gchar *prefix)
 {
-	return (g_file_has_prefix (file, prefix) ||
-	        (!is_strict && g_file_equal (file, prefix)));
+	if (!g_str_has_prefix (path, prefix))
+		return FALSE;
+	if (path[strlen (prefix)] != G_DIR_SEPARATOR)
+		return FALSE;
+
+	return TRUE;
 }
 
 static gboolean
@@ -785,24 +781,27 @@ tracker_monitor_fanotify_remove_recursively (TrackerMonitor *object,
 	MonitoredFile *data;
 	GHashTableIter iter;
 	guint items_removed = 0;
-	GFile *f;
+	const gchar *p;
 	gchar *uri;
+	g_autofree gchar *path = NULL;
 
-	if (!g_hash_table_contains (monitor->monitored_dirs, file)) {
+	path = g_file_get_path (file);
+
+	if (!path || !g_hash_table_contains (monitor->monitored_dirs, path)) {
+		/* If file does not resolve to a local path, attempt with GLib */
 		return TRACKER_MONITOR_CLASS (tracker_monitor_fanotify_parent_class)->remove_recursively (object,
 		                                                                                          file,
 		                                                                                          only_children);
 	}
 
 	g_hash_table_iter_init (&iter, monitor->monitored_dirs);
-	while (g_hash_table_iter_next (&iter, (gpointer *) &f, (gpointer *) &data)) {
-		if (!file_has_maybe_strict_prefix (f, file, only_children))
-			continue;
-
-		if (data)
-			g_hash_table_remove (monitor->handles, data->handle_bytes);
-		g_hash_table_iter_remove (&iter);
-		items_removed++;
+	while (g_hash_table_iter_next (&iter, (gpointer *) &p, (gpointer *) &data)) {
+		if (path_has_prefix (p, path) || (!only_children && g_strcmp0 (p, path) == 0)) {
+			if (data)
+				g_hash_table_remove (monitor->handles, data->handle_bytes);
+			g_hash_table_iter_remove (&iter);
+			items_removed++;
+		}
 	}
 
 	uri = g_file_get_uri (file);
@@ -824,53 +823,45 @@ tracker_monitor_fanotify_move (TrackerMonitor *object,
 	TrackerMonitorFanotify *monitor = TRACKER_MONITOR_FANOTIFY (object);
 	MonitoredFile *data;
 	GHashTableIter iter;
-	gchar *old_prefix;
-	gpointer iter_file;
+	gpointer iter_path;
 	guint items_moved = 0;
 	GList *files = NULL;
-	GFile *f;
+	g_autofree gchar *old_prefix = NULL;
 
-	if (!g_hash_table_contains (monitor->monitored_dirs, old_file)) {
+	old_prefix = g_file_get_path (old_file);
+
+	if (!old_prefix || !g_hash_table_contains (monitor->monitored_dirs, old_prefix)) {
 		return TRACKER_MONITOR_CLASS (tracker_monitor_fanotify_parent_class)->move (object,
 		                                                                            old_file,
 		                                                                            new_file);
 	}
 
-	old_prefix = g_file_get_path (old_file);
-
 	/* Find out which subdirectories should have a file monitor added */
 	g_hash_table_iter_init (&iter, monitor->monitored_dirs);
-	while (g_hash_table_iter_next (&iter, &iter_file, (gpointer *) &data)) {
-		gchar *old_path, *new_path;
-		gchar *new_prefix;
-		gchar *p;
+	while (g_hash_table_iter_next (&iter, &iter_path, (gpointer *) &data)) {
+		g_autofree gchar *new_prefix = NULL, *new_path = NULL;
+		const gchar *p;
+		GFile *f;
 
-		if (!file_has_maybe_strict_prefix (iter_file, old_file, FALSE))
+		if (!path_has_prefix (iter_path, old_prefix) &&
+		    g_strcmp0 (iter_path, old_prefix) != 0)
 			continue;
 
-		old_path = g_file_get_path (iter_file);
-		p = strstr (old_path, old_prefix);
+		p = strstr (iter_path, old_prefix);
 
-		if (!p || strcmp (p, old_prefix) == 0) {
-			g_free (old_path);
+		if (!p || strcmp (p, old_prefix) == 0)
 			continue;
-		}
 
 		/* Move to end of prefix */
 		p += strlen (old_prefix) + 1;
 
 		/* Check this is not the end of the string */
-		if (*p == '\0') {
-			g_free (old_path);
+		if (*p == '\0')
 			continue;
-		}
 
 		new_prefix = g_file_get_path (new_file);
 		new_path = g_build_path (G_DIR_SEPARATOR_S, new_prefix, p, NULL);
-		g_free (new_prefix);
-
 		f = g_file_new_for_path (new_path);
-		g_free (new_path);
 
 		files = g_list_prepend (files, g_object_ref (f));
 		if (data)
@@ -878,37 +869,19 @@ tracker_monitor_fanotify_move (TrackerMonitor *object,
 		g_hash_table_iter_remove (&iter);
 
 		g_object_unref (f);
-		g_free (old_path);
 		items_moved++;
 	}
 
 	while (files) {
+		GFile *f;
+
 		f = files->data;
 		tracker_monitor_fanotify_add (object, f);
 		files = g_list_remove (files, files->data);
 		g_object_unref (f);
 	}
 
-	g_free (old_prefix);
-
 	return items_moved > 0;
-}
-
-static gboolean
-tracker_monitor_fanotify_is_watched (TrackerMonitor *object,
-                                     GFile          *file)
-{
-	TrackerMonitorFanotify *monitor = TRACKER_MONITOR_FANOTIFY (object);
-
-	if (!monitor->enabled)
-		return FALSE;
-
-	if (g_hash_table_contains (monitor->monitored_dirs, file)) {
-		return TRUE;
-	} else {
-		return TRACKER_MONITOR_CLASS (tracker_monitor_fanotify_parent_class)->is_watched (object,
-		                                                                                  file);
-	}
 }
 
 static guint
@@ -917,7 +890,11 @@ tracker_monitor_fanotify_get_count (TrackerMonitor *object)
 	TrackerMonitorFanotify *monitor = TRACKER_MONITOR_FANOTIFY (object);
 	guint count;
 
-	count = g_hash_table_size (monitor->monitored_dirs);
+	if (monitor->enabled)
+		count = g_hash_table_size (monitor->monitored_dirs);
+	else
+		count = g_hash_table_size (monitor->disabled_dirs);
+
 	count += TRACKER_MONITOR_CLASS (tracker_monitor_fanotify_parent_class)->get_count (object);
 
 	return count;
@@ -933,21 +910,17 @@ tracker_monitor_fanotify_class_init (TrackerMonitorFanotifyClass *klass)
 	monitor_class = TRACKER_MONITOR_CLASS (klass);
 
 	object_class->finalize = tracker_monitor_fanotify_finalize;
-	object_class->set_property = tracker_monitor_fanotify_set_property;
 	object_class->get_property = tracker_monitor_fanotify_get_property;
 
 	monitor_class->add = tracker_monitor_fanotify_add;
 	monitor_class->remove = tracker_monitor_fanotify_remove;
 	monitor_class->remove_recursively = tracker_monitor_fanotify_remove_recursively;
 	monitor_class->move = tracker_monitor_fanotify_move;
-	monitor_class->is_watched = tracker_monitor_fanotify_is_watched;
 	monitor_class->set_enabled = tracker_monitor_fanotify_set_enabled;
 	monitor_class->get_count = tracker_monitor_fanotify_get_count;
 
 	g_object_class_override_property (object_class, PROP_ENABLED, "enabled");
-	g_object_class_override_property (object_class, PROP_LIMIT, "limit");
 	g_object_class_override_property (object_class, PROP_COUNT, "count");
-	g_object_class_override_property (object_class, PROP_IGNORED, "ignored");
 }
 
 static void
@@ -957,10 +930,15 @@ tracker_monitor_fanotify_init (TrackerMonitorFanotify *monitor)
 	monitor->enabled = TRUE;
 
 	monitor->monitored_dirs =
-		g_hash_table_new_full (g_file_hash,
-		                       (GEqualFunc) g_file_equal,
-		                       (GDestroyNotify) g_object_unref,
+		g_hash_table_new_full (g_str_hash,
+		                       g_str_equal,
+		                       NULL,
 		                       (GDestroyNotify) monitored_file_free);
+	monitor->disabled_dirs =
+		g_hash_table_new_full (g_str_hash,
+		                       g_str_equal,
+		                       g_free,
+		                       NULL);
 	monitor->cached_events =
 		g_hash_table_new_full (g_file_hash,
 		                       (GEqualFunc) g_file_equal,

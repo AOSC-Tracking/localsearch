@@ -44,7 +44,6 @@ struct TrackerMonitorGlibPrivate {
 
 	guint          monitor_limit;
 	gboolean       monitor_limit_warned;
-	guint          monitors_ignored;
 
 	/* For FAM, the _CHANGES_DONE event is not signalled, so we
 	 * have to just use the _CHANGED event instead.
@@ -106,16 +105,10 @@ enum {
 enum {
 	PROP_0,
 	PROP_ENABLED,
-	PROP_LIMIT,
 	PROP_COUNT,
-	PROP_IGNORED,
 };
 
 static void           tracker_monitor_glib_finalize     (GObject        *object);
-static void           tracker_monitor_glib_set_property (GObject        *object,
-                                                         guint           prop_id,
-                                                         const GValue   *value,
-                                                         GParamSpec     *pspec);
 static void           tracker_monitor_glib_get_property (GObject        *object,
                                                          guint           prop_id,
                                                          GValue         *value,
@@ -142,8 +135,6 @@ static gboolean tracker_monitor_glib_remove_recursively (TrackerMonitor *monitor
 static gboolean tracker_monitor_glib_move (TrackerMonitor *monitor,
                                            GFile          *file,
                                            GFile          *other_file);
-static gboolean tracker_monitor_glib_is_watched (TrackerMonitor *monitor,
-                                                 GFile          *file);
 static void tracker_monitor_glib_set_enabled (TrackerMonitor *monitor,
                                               gboolean        enabled);
 
@@ -303,21 +294,17 @@ tracker_monitor_glib_class_init (TrackerMonitorGlibClass *klass)
 	monitor_class = TRACKER_MONITOR_CLASS (klass);
 
 	object_class->finalize = tracker_monitor_glib_finalize;
-	object_class->set_property = tracker_monitor_glib_set_property;
 	object_class->get_property = tracker_monitor_glib_get_property;
 
 	monitor_class->add = tracker_monitor_glib_add;
 	monitor_class->remove = tracker_monitor_glib_remove;
 	monitor_class->remove_recursively = tracker_monitor_glib_remove_recursively;
 	monitor_class->move = tracker_monitor_glib_move;
-	monitor_class->is_watched = tracker_monitor_glib_is_watched;
 	monitor_class->set_enabled = tracker_monitor_glib_set_enabled;
 	monitor_class->get_count = tracker_monitor_glib_get_count;
 
 	g_object_class_override_property (object_class, PROP_ENABLED, "enabled");
-	g_object_class_override_property (object_class, PROP_LIMIT, "limit");
 	g_object_class_override_property (object_class, PROP_COUNT, "count");
-	g_object_class_override_property (object_class, PROP_IGNORED, "ignored");
 }
 
 static MonitorEvent *
@@ -421,22 +408,6 @@ tracker_monitor_glib_finalize (GObject *object)
 }
 
 static void
-tracker_monitor_glib_set_property (GObject      *object,
-                                   guint         prop_id,
-                                   const GValue *value,
-                                   GParamSpec   *pspec)
-{
-	switch (prop_id) {
-	case PROP_ENABLED:
-		tracker_monitor_set_enabled (TRACKER_MONITOR (object),
-		                             g_value_get_boolean (value));
-		break;
-	default:
-		G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-	}
-}
-
-static void
 tracker_monitor_glib_get_property (GObject      *object,
                                    guint         prop_id,
                                    GValue       *value,
@@ -450,14 +421,8 @@ tracker_monitor_glib_get_property (GObject      *object,
 	case PROP_ENABLED:
 		g_value_set_boolean (value, priv->enabled);
 		break;
-	case PROP_LIMIT:
-		g_value_set_uint (value, priv->monitor_limit);
-		break;
 	case PROP_COUNT:
 		g_value_set_uint (value, tracker_monitor_get_count (TRACKER_MONITOR (object)));
-		break;
-	case PROP_IGNORED:
-		g_value_set_uint (value, priv->monitors_ignored);
 		break;
 	default:
 		G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -1125,8 +1090,6 @@ tracker_monitor_glib_add (TrackerMonitor *monitor,
 
 	/* Cap the number of monitors */
 	if (g_hash_table_size (priv->monitored_dirs) >= priv->monitor_limit) {
-		priv->monitors_ignored++;
-
 		if (!priv->monitor_limit_warned) {
 			g_warning ("The maximum number of monitors to set (%d) "
 			           "has been reached, not adding any new ones",
@@ -1303,20 +1266,6 @@ monitor_cancel_recursively (TrackerMonitorGlib *monitor,
 	}
 
 	return items_cancelled > 0;
-}
-
-static gboolean
-tracker_monitor_glib_is_watched (TrackerMonitor *monitor,
-                                 GFile          *file)
-{
-	TrackerMonitorGlibPrivate *priv;
-
-	priv = tracker_monitor_glib_get_instance_private (TRACKER_MONITOR_GLIB (monitor));
-
-	if (!priv->enabled)
-		return FALSE;
-
-	return g_hash_table_contains (priv->monitored_dirs, file);
 }
 
 TrackerMonitor *

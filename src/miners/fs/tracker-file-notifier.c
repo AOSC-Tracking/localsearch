@@ -1578,10 +1578,9 @@ tracker_file_notifier_finalize (GObject *object)
 	g_clear_object (&priv->content_query);
 	g_clear_object (&priv->deleted_query);
 
-	tracker_monitor_set_enabled (priv->monitor, FALSE);
 	g_signal_handlers_disconnect_by_data (priv->monitor, object);
+	g_clear_object (&priv->monitor);
 
-	g_object_unref (priv->monitor);
 	g_clear_object (&priv->connection);
 
 	g_clear_pointer (&priv->current_index_root, tracker_index_root_free);
@@ -1590,43 +1589,6 @@ tracker_file_notifier_finalize (GObject *object)
 	g_list_free (priv->pending_index_roots);
 
 	G_OBJECT_CLASS (tracker_file_notifier_parent_class)->finalize (object);
-}
-
-static void
-check_disable_monitor (TrackerFileNotifier *notifier)
-{
-	TrackerFileNotifierPrivate *priv;
-	g_autoptr (TrackerSparqlStatement) stmt = NULL;
-	g_autoptr (TrackerSparqlCursor) cursor = NULL;
-	gint64 folder_count = 0;
-	g_autoptr (GError) error = NULL;
-
-	priv = tracker_file_notifier_get_instance_private (notifier);
-	stmt = tracker_load_statement (priv->connection, "get-folder-count.rq", &error);
-
-	if (stmt) {
-		cursor = tracker_sparql_statement_execute (stmt, NULL, &error);
-	}
-
-	if (!error && tracker_sparql_cursor_next (cursor, NULL, &error)) {
-		folder_count = tracker_sparql_cursor_get_integer (cursor, 0);
-		tracker_sparql_cursor_close (cursor);
-	}
-
-	if (error) {
-		g_warning ("Could not get folder count: %s\n", error->message);
-	} else if (folder_count > tracker_monitor_get_limit (priv->monitor)) {
-		/* If the folder count exceeds the monitor limit, there's
-		 * nothing we can do anyway to prevent possibly out of date
-		 * content. As it is the case no matter what we try, fully
-		 * embrace it instead, and disable monitors until after crawling
-		 * has been performed. This dramatically improves crawling time
-		 * as monitors are inherently expensive.
-		 */
-		g_info ("Temporarily disabling monitors until crawling is "
-		        "completed. Too many folders to monitor anyway");
-		tracker_monitor_set_enabled (priv->monitor, FALSE);
-	}
 }
 
 static void
@@ -1647,26 +1609,6 @@ tracker_file_notifier_constructed (GObject *object)
 	                  G_CALLBACK (indexing_tree_directory_removed), object);
 	g_signal_connect (priv->indexing_tree, "child-updated",
 	                  G_CALLBACK (indexing_tree_child_updated), object);
-
-	check_disable_monitor (TRACKER_FILE_NOTIFIER (object));
-}
-
-static void
-tracker_file_notifier_real_finished (TrackerFileNotifier *notifier)
-{
-	TrackerFileNotifierPrivate *priv;
-
-	priv = tracker_file_notifier_get_instance_private (notifier);
-
-	if (!tracker_monitor_get_enabled (priv->monitor)) {
-		/* If the monitor was disabled on ::constructed (see
-		 * check_disable_monitor()), enable it back again.
-		 * This will lazily create all missing directory
-		 * monitors.
-		 */
-		g_info ("Re-enabling directory monitors");
-		tracker_monitor_set_enabled (priv->monitor, TRUE);
-	}
 }
 
 static void
@@ -1678,8 +1620,6 @@ tracker_file_notifier_class_init (TrackerFileNotifierClass *klass)
 	object_class->set_property = tracker_file_notifier_set_property;
 	object_class->get_property = tracker_file_notifier_get_property;
 	object_class->constructed = tracker_file_notifier_constructed;
-
-	klass->finished = tracker_file_notifier_real_finished;
 
 	signals[FILE_CREATED] =
 		g_signal_new ("file-created",

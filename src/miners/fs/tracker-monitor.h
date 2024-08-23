@@ -47,8 +47,6 @@ struct _TrackerMonitorClass {
 	gboolean (* move) (TrackerMonitor *monitor,
 	                   GFile          *src,
 	                   GFile          *dst);
-	gboolean (* is_watched) (TrackerMonitor *monitor,
-	                         GFile          *file);
 	void (* set_enabled) (TrackerMonitor *monitor,
 	                      gboolean        enabled);
 	guint (* get_count) (TrackerMonitor *monitor);
@@ -70,11 +68,7 @@ gboolean        tracker_monitor_remove_children_recursively (TrackerMonitor *mon
 gboolean        tracker_monitor_move                 (TrackerMonitor *monitor,
                                                       GFile          *old_file,
                                                       GFile          *new_file);
-gboolean        tracker_monitor_is_watched           (TrackerMonitor *monitor,
-                                                      GFile          *file);
 guint           tracker_monitor_get_count            (TrackerMonitor *monitor);
-guint           tracker_monitor_get_ignored          (TrackerMonitor *monitor);
-guint           tracker_monitor_get_limit            (TrackerMonitor *monitor);
 
 TrackerMonitor * tracker_monitor_new (GError **error);
 
