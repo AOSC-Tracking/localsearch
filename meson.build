@@ -82,7 +82,7 @@ add_project_arguments('-DG_LOG_DOMAIN="Tracker"', language: 'c')
 add_project_arguments('-DG_LOG_STRUCTURED=1', language: 'c')
 
 if get_option('buildtype') == 'plain'
-  # Default case is to allow TRACKER_DEBUG which is very useful for
+  # Default case is to allow LOCALSEARCH_DEBUG which is very useful for
   # triaging user-reported issues.
   # Use --buildtype=release to disable debug completely.
   debug = true

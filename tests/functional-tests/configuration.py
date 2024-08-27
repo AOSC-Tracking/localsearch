@@ -93,7 +93,7 @@ def create_monitored_test_dir():
 
 def remove_monitored_test_dir(path):
     if tests_no_cleanup():
-        print("\nTRACKER_DEBUG=tests-no-cleanup: Test data kept in %s" % path)
+        print("\nLOCALSEARCH_DEBUG=tests-no-cleanup: Test data kept in %s" % path)
     else:
         shutil.rmtree(path)
 
@@ -127,7 +127,7 @@ _debug_flags = None
 
 
 def get_debug_flags():
-    """Parse the TRACKER_DEBUG environment variable and return flags."""
+    """Parse the LOCALSEARCH_DEBUG environment variable and return flags."""
     global _debug_flags
     if _debug_flags is None:
         flag_tests = GLib.DebugKey()
@@ -139,17 +139,17 @@ def get_debug_flags():
         flag_tests_no_cleanup.value = DEBUG_TESTS_NO_CLEANUP
 
         flags = [flag_tests, flag_tests_no_cleanup]
-        flags_str = os.environ.get("TRACKER_DEBUG", "")
+        flags_str = os.environ.get("LOCALSEARCH_DEBUG", "")
 
         _debug_flags = GLib.parse_debug_string(flags_str, flags)
     return _debug_flags
 
 
 def tests_verbose():
-    """True if TRACKER_DEBUG=tests"""
+    """True if LOCALSEARCH_DEBUG=tests"""
     return get_debug_flags() & DEBUG_TESTS
 
 
 def tests_no_cleanup():
-    """True if TRACKER_DEBUG=tests-no-cleanup"""
+    """True if LOCALSEARCH_DEBUG=tests-no-cleanup"""
     return get_debug_flags() & DEBUG_TESTS_NO_CLEANUP
